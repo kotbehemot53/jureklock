@@ -1,9 +1,8 @@
 #include <Arduino.h>
 #include <EEPROM.h>
-//#include <../.pio/libdeps/uno/IRremote/src/IRremote.hpp>
 #include <../.pio/libdeps/uno/IRremote/src/TinyIRReceiver.hpp>
 
-//#define IR_RECEIVE_PIN 8
+//#define IR_RECEIVE_PIN 2
 
 #define BTN_UP 0x18
 #define BTN_DN 0x52
@@ -17,8 +16,6 @@ volatile struct TinyIRReceiverCallbackDataStruct sCallbackData;
 
 void setup() {
 //    pinMode(LED_BUILTIN, OUTPUT);
-
-//    IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);
 
     initPCIInterruptForTinyReceiver();
 
@@ -43,35 +40,6 @@ void setup() {
 }
 
 void loop() {
-//    digitalWrite(LED_BUILTIN, HIGH);
-//    delay(100);
-//    digitalWrite(LED_BUILTIN, LOW);
-//    delay(100);
-//    digitalWrite(LED_BUILTIN, HIGH);
-//    delay(100);
-//    digitalWrite(LED_BUILTIN, LOW);
-//    delay(1000);
-
-//    if (IrReceiver.decode()) {
-////        IrReceiver.decodeNEC();
-//
-//        IRData* received = IrReceiver.read();
-//
-////        Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX); // Print "old" raw data
-////        // USE NEW 3.x FUNCTIONS
-//        Serial.println(EEPROM.read(0));
-//        Serial.println(EEPROM.read(1));
-//        Serial.println(EEPROM.read(2));
-//        Serial.println(EEPROM.read(3));
-//
-//        IrReceiver.printIRResultShort(&Serial); // Print complete received data in one line
-////        IrReceiver.printIRSendUsage(&Serial);   // Print the statement required to send this data
-//        if (received->protocol == NEC) {
-//            EEPROM.write(0, received->command);
-//        }
-//        IrReceiver.resume(); // Enable receiving of the next value
-//    }
-
     if (sCallbackData.justWritten) {
         sCallbackData.justWritten = false;
 
@@ -83,9 +51,6 @@ void loop() {
             Serial.print(F(" Command=0x"));
 
             Serial.print(sCallbackData.Command, HEX);
-//            if (sCallbackData.Flags == IRDATA_FLAGS_IS_REPEAT) {
-//                Serial.print(F(" Repeat"));
-//            }
             if (sCallbackData.Flags == IRDATA_FLAGS_PARITY_FAILED) {
                 Serial.print(F(" Parity failed"));
             }
