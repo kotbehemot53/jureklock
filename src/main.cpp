@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <EEPROM.h>
 #include <../.pio/libdeps/uno/IRremote/src/TinyIRReceiver.hpp>
+#include <../.pio/libdeps/uno/OneButton/src/OneButtonTiny.h>
+#include <../.pio/libdeps/uno/arduino-timer/src/arduino-timer.h>
 #include <../lib/Lock/Lock.h>
 
 //#define IR_RECEIVE_PIN 2
@@ -34,6 +36,9 @@ unsigned char numberButtons[10] = {BTN_0, BTN_1, BTN_2, BTN_3, BTN_4, BTN_5, BTN
 bool isNumberButton(unsigned char command);
 
 Lock lock;
+OneButtonTiny* resetBtn;
+auto timer = timer_create_default();
+
 short codeBufferPtr = -1;
 bool listeningToOpen = false;
 bool listeningToChangeCode = false;
@@ -52,16 +57,25 @@ void stopListeningForCode();
 void listenForCodeToOpen();
 void listenForNewCode();
 
-void factoryReset();
+static void factoryReset();
+
+bool statusLEDOn(void*);
+bool statusLEDOff(void*);
+void shortBlink();
+void longBlink();
+void doubleBlink();
+void tripleBlink();
 
 void setup() {
 //    pinMode(LED_BUILTIN, OUTPUT);
     pinMode(DOOR_PIN, OUTPUT);
-    pinMode(NEG_RESET_PIN, INPUT_PULLUP);
     pinMode(STATUS_LED_PIN, OUTPUT);
 
     digitalWrite(DOOR_PIN, LOW);
     digitalWrite(STATUS_LED_PIN, LOW);
+
+    resetBtn = new OneButtonTiny(NEG_RESET_PIN);
+    resetBtn->attachClick(factoryReset);
 
     initPCIInterruptForTinyReceiver();
 
@@ -70,7 +84,12 @@ void setup() {
     Serial.println("Hullo");
 
     // save a default code if non has been set yet
-    if (255 == EEPROM.read(0) && 255 == EEPROM.read(1) && 255 == EEPROM.read(2) && 255 == EEPROM.read(3)) {
+    if (
+        !isNumberButton(EEPROM.read(0)) ||
+        !isNumberButton(EEPROM.read(1)) ||
+        !isNumberButton(EEPROM.read(2)) ||
+        !isNumberButton(EEPROM.read(3))
+    ) {
         factoryReset();
     }
 
@@ -81,7 +100,7 @@ void setup() {
     printCurrentCode();
 }
 
-void factoryReset()
+static void factoryReset()
 {
     codeBuffer[0] = LOCK_DEFAULT_DIGIT_0;
     codeBuffer[1] = LOCK_DEFAULT_DIGIT_1;
@@ -93,9 +112,8 @@ void factoryReset()
 }
 
 void loop() {
-    if (!digitalRead(NEG_RESET_PIN)) {
-        factoryReset();
-    }
+    timer.tick();
+    resetBtn->tick();
 
     closeDoorIfNecessary();
 
@@ -118,6 +136,7 @@ void loop() {
 //            EEPROM.write(0, sCallbackData.Command);
             if (sCallbackData.Command == BTN_ASTR) {
                 listenForCodeToOpen();
+                shortBlink();
                 // TODO: introduce keyboard class?
             } else if (listeningToOpen && codeBufferPtr < 4 && isNumberButton(sCallbackData.Command)) {
                 codeBuffer[codeBufferPtr++] = sCallbackData.Command;
@@ -126,13 +145,15 @@ void loop() {
 
                     if(lock.checkCode(codeBuffer)) {
                         openDoor();
-                        Serial.println("Door opened.");
+                        Serial.println("Door unlocked.");
                     } else {
+                        doubleBlink();
                         Serial.println("Code check failed.");
                     }
                 }
             } else if (isDoorOpen() && sCallbackData.Command == BTN_HASH) {
                 listenForNewCode();
+                tripleBlink();
             } else if (listeningToChangeCode && codeBufferPtr < 4 && isNumberButton(sCallbackData.Command)) {
                 codeBuffer[codeBufferPtr++] = sCallbackData.Command;
                 if (codeBufferPtr >= 4) {
@@ -142,6 +163,7 @@ void loop() {
                     saveCode();
                     Serial.println("Code set.");
                     printCurrentCode();
+                    longBlink();
                 }
             }
         }
@@ -224,20 +246,64 @@ void printCurrentCode()
 
 void closeDoorIfNecessary()
 {
-    if (isDoorOpen() && (millis() - doorOpenedAtMs > DOOR_OPEN_TIME_MS)) {
-        closeDoor();
-        Serial.println("Door closed.");
+    // TODO: use timer for this!
+    if (isDoorOpen()) {
+        digitalWrite(DOOR_PIN, HIGH);
+        if (millis() - doorOpenedAtMs > DOOR_OPEN_TIME_MS) {
+            closeDoor();
+            Serial.println("Door locked.");
+        }
     }
 }
 
 int isDoorOpen() { return digitalRead(DOOR_PIN); }
 void closeDoor() {
     digitalWrite(DOOR_PIN, LOW);
-    digitalWrite(STATUS_LED_PIN, LOW);
+    statusLEDOff(NULL);
 }
 void openDoor()
 {
     digitalWrite(DOOR_PIN, HIGH);
-    digitalWrite(STATUS_LED_PIN, HIGH);
+    statusLEDOn(NULL);
     doorOpenedAtMs = millis();
+}
+
+bool statusLEDOn(void*)
+{
+    digitalWrite(STATUS_LED_PIN, HIGH);
+}
+
+bool statusLEDOff(void*)
+{
+    digitalWrite(STATUS_LED_PIN, LOW);
+}
+
+void shortBlink()
+{
+    statusLEDOn(NULL);
+    timer.in(50, statusLEDOff);
+}
+
+void longBlink()
+{
+    statusLEDOn(NULL);
+    timer.in(1000, statusLEDOff);
+}
+
+void doubleBlink()
+{
+    statusLEDOn(NULL);
+    timer.in(100, statusLEDOff);
+    timer.in(200, statusLEDOn);
+    timer.in(300, statusLEDOff);
+}
+
+void tripleBlink()
+{
+    statusLEDOn(NULL);
+    timer.in(100, statusLEDOff);
+    timer.in(200, statusLEDOn);
+    timer.in(300, statusLEDOff);
+    timer.in(400, statusLEDOn);
+    timer.in(500, statusLEDOff);
 }
