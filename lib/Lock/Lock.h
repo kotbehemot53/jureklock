@@ -5,11 +5,15 @@
 #ifndef JUREKLOCK1_LOCK_H
 #define JUREKLOCK1_LOCK_H
 
+#define LOCK_DEFAULT_DIGIT_0 0x45
+#define LOCK_DEFAULT_DIGIT_1 0x45
+#define LOCK_DEFAULT_DIGIT_2 0x45
+#define LOCK_DEFAULT_DIGIT_3 0x45
+
 class Lock
 {
 private:
-    // TODO: define with constants?
-    unsigned char code[4] = {0x45, 0x45, 0x45, 0x45};
+    unsigned char code[4] = {LOCK_DEFAULT_DIGIT_0, LOCK_DEFAULT_DIGIT_1, LOCK_DEFAULT_DIGIT_2, LOCK_DEFAULT_DIGIT_3};
 
 public:
     void setCode(unsigned char[4]);

@@ -30,7 +30,7 @@ bool isNumberButton(unsigned char command);
 
 Lock lock;
 short codeBufferPtr = -1;
-unsigned char codeBuffer[4] = {0x45,0x45,0x45,0x45};
+unsigned char codeBuffer[4] = {LOCK_DEFAULT_DIGIT_0,LOCK_DEFAULT_DIGIT_1,LOCK_DEFAULT_DIGIT_2,LOCK_DEFAULT_DIGIT_3};
 void printCurrentCode();
 void saveCode();
 void loadCode();
