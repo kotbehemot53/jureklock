@@ -47,11 +47,10 @@ void printCurrentCode();
 void saveCode();
 void loadCode();
 
-unsigned long doorOpenedAtMs = 0;
-void closeDoorIfNecessary();
-int isDoorOpen();
-void openDoor();
-void closeDoor();
+void* doorClosingTask;
+int isDoorUnlocked();
+void unlockDoor();
+bool lockDoor(void*);
 
 void stopListeningForCode();
 void listenForCodeToOpen();
@@ -66,8 +65,9 @@ void longBlink();
 void doubleBlink();
 void tripleBlink();
 
+void unlockDoorAndScheduleLocking();
+
 void setup() {
-//    pinMode(LED_BUILTIN, OUTPUT);
     pinMode(DOOR_PIN, OUTPUT);
     pinMode(STATUS_LED_PIN, OUTPUT);
 
@@ -115,8 +115,6 @@ void loop() {
     timer.tick();
     resetBtn->tick();
 
-    closeDoorIfNecessary();
-
     if (sCallbackData.justWritten) {
         sCallbackData.justWritten = false;
 
@@ -133,7 +131,6 @@ void loop() {
             }
             Serial.println();
 
-//            EEPROM.write(0, sCallbackData.Command);
             if (sCallbackData.Command == BTN_ASTR) {
                 listenForCodeToOpen();
                 shortBlink();
@@ -144,14 +141,13 @@ void loop() {
                     stopListeningForCode();
 
                     if(lock.checkCode(codeBuffer)) {
-                        openDoor();
-                        Serial.println("Door unlocked.");
+                        unlockDoorAndScheduleLocking();
                     } else {
                         doubleBlink();
                         Serial.println("Code check failed.");
                     }
                 }
-            } else if (isDoorOpen() && sCallbackData.Command == BTN_HASH) {
+            } else if (isDoorUnlocked() && sCallbackData.Command == BTN_HASH) {
                 listenForNewCode();
                 tripleBlink();
             } else if (listeningToChangeCode && codeBufferPtr < 4 && isNumberButton(sCallbackData.Command)) {
@@ -159,7 +155,6 @@ void loop() {
                 if (codeBufferPtr >= 4) {
                     stopListeningForCode();
 
-                    // TODO: require repeated input on new code setting? what if somebody forgets code? factory reset btn??
                     saveCode();
                     Serial.println("Code set.");
                     printCurrentCode();
@@ -244,38 +239,40 @@ void printCurrentCode()
     Serial.println();
 }
 
-void closeDoorIfNecessary()
+void unlockDoorAndScheduleLocking()
 {
-    // TODO: use timer for this!
-    if (isDoorOpen()) {
-        digitalWrite(DOOR_PIN, HIGH);
-        if (millis() - doorOpenedAtMs > DOOR_OPEN_TIME_MS) {
-            closeDoor();
-            Serial.println("Door locked.");
-        }
-    }
+    timer.cancel(doorClosingTask);
+    unlockDoor();
+    doorClosingTask = timer.in(DOOR_OPEN_TIME_MS, lockDoor);
 }
 
-int isDoorOpen() { return digitalRead(DOOR_PIN); }
-void closeDoor() {
+int isDoorUnlocked() { return digitalRead(DOOR_PIN); }
+bool lockDoor(void*) {
     digitalWrite(DOOR_PIN, LOW);
     statusLEDOff(NULL);
+    Serial.println("Door locked.");
+
+    return false;
 }
-void openDoor()
+void unlockDoor()
 {
     digitalWrite(DOOR_PIN, HIGH);
     statusLEDOn(NULL);
-    doorOpenedAtMs = millis();
+    Serial.println("Door unlocked.");
 }
 
 bool statusLEDOn(void*)
 {
     digitalWrite(STATUS_LED_PIN, HIGH);
+
+    return false;
 }
 
 bool statusLEDOff(void*)
 {
     digitalWrite(STATUS_LED_PIN, LOW);
+
+    return false;
 }
 
 void shortBlink()
