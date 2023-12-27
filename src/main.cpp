@@ -30,6 +30,14 @@
 
 #define DOOR_OPEN_TIME_MS 10000 // 10 s
 
+// TODO:
+//      1. refactor (OOP)
+//      2. add screen maybe?
+//      3. add some silly game??
+//      3. migrate to Attiny? avr DA series?
+//      4. self-etched board?
+//      5. 5V buck converter?
+
 volatile struct TinyIRReceiverCallbackDataStruct sCallbackData;
 
 unsigned char numberButtons[10] = {BTN_0, BTN_1, BTN_2, BTN_3, BTN_4, BTN_5, BTN_6, BTN_7, BTN_8, BTN_9};
