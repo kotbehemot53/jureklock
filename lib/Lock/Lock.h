@@ -18,6 +18,7 @@ private:
 public:
     void setCode(unsigned char[4]);
     unsigned char* getCode();
+    bool checkCode (unsigned char[4]);
 };
 
 #endif //JUREKLOCK1_LOCK_H

@@ -4,6 +4,7 @@
 #include <../lib/Lock/Lock.h>
 
 //#define IR_RECEIVE_PIN 2
+#define DOOR_PIN 8
 
 #define BTN_UP 0x18
 #define BTN_DN 0x52
@@ -23,6 +24,8 @@
 #define BTN_8 0x15
 #define BTN_9 0x9
 
+#define DOOR_OPEN_TIME_MS 10000 // 10 s
+
 volatile struct TinyIRReceiverCallbackDataStruct sCallbackData;
 
 unsigned char numberButtons[10] = {BTN_0, BTN_1, BTN_2, BTN_3, BTN_4, BTN_5, BTN_6, BTN_7, BTN_8, BTN_9};
@@ -30,13 +33,30 @@ bool isNumberButton(unsigned char command);
 
 Lock lock;
 short codeBufferPtr = -1;
+bool listeningToOpen = false;
+bool listeningToChangeCode = false;
 unsigned char codeBuffer[4] = {LOCK_DEFAULT_DIGIT_0,LOCK_DEFAULT_DIGIT_1,LOCK_DEFAULT_DIGIT_2,LOCK_DEFAULT_DIGIT_3};
 void printCurrentCode();
 void saveCode();
 void loadCode();
 
+unsigned long doorOpenedAtMs = 0;
+void closeDoorIfNecessary();
+int isDoorOpen();
+void openDoor();
+void closeDoor();
+
+
+void stopListeningForCode();
+
+void listenForCodeToOpen();
+
+void listenForNewCode();
+
 void setup() {
 //    pinMode(LED_BUILTIN, OUTPUT);
+    pinMode(DOOR_PIN, OUTPUT);
+    digitalWrite(DOOR_PIN, LOW);
 
     initPCIInterruptForTinyReceiver();
 
@@ -57,6 +77,8 @@ void setup() {
 }
 
 void loop() {
+    closeDoorIfNecessary();
+
     if (sCallbackData.justWritten) {
         sCallbackData.justWritten = false;
 
@@ -75,16 +97,28 @@ void loop() {
 
 //            EEPROM.write(0, sCallbackData.Command);
             if (sCallbackData.Command == BTN_ASTR) {
-                // initialize inputting code
-                codeBufferPtr = 0;
-                Serial.println("Listening");
+                listenForCodeToOpen();
                 // TODO: introduce keyboard class?
-            } else if (codeBufferPtr >= 0 && codeBufferPtr < 4 && isNumberButton(sCallbackData.Command)) {
+            } else if (listeningToOpen && codeBufferPtr < 4 && isNumberButton(sCallbackData.Command)) {
                 codeBuffer[codeBufferPtr++] = sCallbackData.Command;
                 if (codeBufferPtr >= 4) {
-                    codeBufferPtr = -1;
+                    stopListeningForCode();
 
-                    // TODO: lock.checkCode(codeBuffer) + msg instead of setting it here
+                    if(lock.checkCode(codeBuffer)) {
+                        openDoor();
+                        Serial.println("Door opened.");
+                    } else {
+                        Serial.println("Code check failed.");
+                    }
+                }
+            } else if (isDoorOpen() && sCallbackData.Command == BTN_HASH) {
+                listenForNewCode();
+            } else if (listeningToChangeCode && codeBufferPtr < 4 && isNumberButton(sCallbackData.Command)) {
+                codeBuffer[codeBufferPtr++] = sCallbackData.Command;
+                if (codeBufferPtr >= 4) {
+                    stopListeningForCode();
+
+                    // TODO: require repeated input on new code setting
                     saveCode();
                     Serial.println("Code set.");
                     printCurrentCode();
@@ -95,6 +129,28 @@ void loop() {
 
 }
 
+void listenForNewCode()
+{
+    codeBufferPtr = 0;
+    listeningToOpen = false;
+    listeningToChangeCode = true;
+    Serial.println("Listening for new code");
+}
+
+void listenForCodeToOpen()
+{
+    codeBufferPtr = 0;
+    listeningToOpen = true;
+    listeningToChangeCode = false;
+    Serial.println("Listening for code to open");
+}
+
+void stopListeningForCode()
+{
+    codeBufferPtr = -1;
+    listeningToOpen = false;
+    listeningToChangeCode = false;
+}
 
 bool isNumberButton(unsigned char command)
 {
@@ -113,6 +169,7 @@ void saveCode()
     for (short i = 0; i < 4; i++) {
         EEPROM.write(i, codeBuffer[i]);
     }
+    // TODO: maybe the lock should save it in memory and retrieve it? or not?
     lock.setCode(codeBuffer);
 }
 
@@ -143,4 +200,20 @@ void printCurrentCode()
     Serial.print(" 0x");
     Serial.print(lock.getCode()[3], HEX);
     Serial.println();
+}
+
+void closeDoorIfNecessary()
+{
+    if (isDoorOpen() && (millis() - doorOpenedAtMs > DOOR_OPEN_TIME_MS)) {
+        closeDoor();
+        Serial.println("Door closed.");
+    }
+}
+
+int isDoorOpen() { return digitalRead(DOOR_PIN); }
+void closeDoor() { digitalWrite(DOOR_PIN, LOW); }
+void openDoor()
+{
+    digitalWrite(DOOR_PIN, HIGH);
+    doorOpenedAtMs = millis();
 }
