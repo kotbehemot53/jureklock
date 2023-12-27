@@ -5,6 +5,8 @@
 
 //#define IR_RECEIVE_PIN 2
 #define DOOR_PIN 8
+#define NEG_RESET_PIN 9
+#define STATUS_LED_PIN 10
 
 #define BTN_UP 0x18
 #define BTN_DN 0x52
@@ -46,17 +48,20 @@ int isDoorOpen();
 void openDoor();
 void closeDoor();
 
-
 void stopListeningForCode();
-
 void listenForCodeToOpen();
-
 void listenForNewCode();
+
+void factoryReset();
 
 void setup() {
 //    pinMode(LED_BUILTIN, OUTPUT);
     pinMode(DOOR_PIN, OUTPUT);
+    pinMode(NEG_RESET_PIN, INPUT_PULLUP);
+    pinMode(STATUS_LED_PIN, OUTPUT);
+
     digitalWrite(DOOR_PIN, LOW);
+    digitalWrite(STATUS_LED_PIN, LOW);
 
     initPCIInterruptForTinyReceiver();
 
@@ -66,7 +71,7 @@ void setup() {
 
     // save a default code if non has been set yet
     if (255 == EEPROM.read(0) && 255 == EEPROM.read(1) && 255 == EEPROM.read(2) && 255 == EEPROM.read(3)) {
-        saveCode();
+        factoryReset();
     }
 
     // initialize saved code
@@ -76,7 +81,22 @@ void setup() {
     printCurrentCode();
 }
 
+void factoryReset()
+{
+    codeBuffer[0] = LOCK_DEFAULT_DIGIT_0;
+    codeBuffer[1] = LOCK_DEFAULT_DIGIT_1;
+    codeBuffer[2] = LOCK_DEFAULT_DIGIT_2;
+    codeBuffer[3] = LOCK_DEFAULT_DIGIT_3;
+    saveCode();
+    Serial.println("Factory code reset done.");
+    printCurrentCode();
+}
+
 void loop() {
+    if (!digitalRead(NEG_RESET_PIN)) {
+        factoryReset();
+    }
+
     closeDoorIfNecessary();
 
     if (sCallbackData.justWritten) {
@@ -118,7 +138,7 @@ void loop() {
                 if (codeBufferPtr >= 4) {
                     stopListeningForCode();
 
-                    // TODO: require repeated input on new code setting
+                    // TODO: require repeated input on new code setting? what if somebody forgets code? factory reset btn??
                     saveCode();
                     Serial.println("Code set.");
                     printCurrentCode();
@@ -211,9 +231,13 @@ void closeDoorIfNecessary()
 }
 
 int isDoorOpen() { return digitalRead(DOOR_PIN); }
-void closeDoor() { digitalWrite(DOOR_PIN, LOW); }
+void closeDoor() {
+    digitalWrite(DOOR_PIN, LOW);
+    digitalWrite(STATUS_LED_PIN, LOW);
+}
 void openDoor()
 {
     digitalWrite(DOOR_PIN, HIGH);
+    digitalWrite(STATUS_LED_PIN, HIGH);
     doorOpenedAtMs = millis();
 }
