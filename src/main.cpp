@@ -42,11 +42,53 @@ volatile struct TinyIRReceiverCallbackDataStruct sCallbackData;
 
 unsigned char numberButtons[10] = {BTN_0, BTN_1, BTN_2, BTN_3, BTN_4, BTN_5, BTN_6, BTN_7, BTN_8, BTN_9};
 bool isNumberButton(unsigned char command);
+inline char* findButtonName(unsigned char code)
+{
+    switch (code) {
+        case BTN_HASH:
+            return "#";
+        case BTN_ASTR:
+            return "*";
+        case BTN_0:
+            return "0";
+        case BTN_1:
+            return "1";
+        case BTN_2:
+            return "2";
+        case BTN_3:
+            return "3";
+        case BTN_4:
+            return "4";
+        case BTN_5:
+            return "5";
+        case BTN_6:
+            return "6";
+        case BTN_7:
+            return "7";
+        case BTN_8:
+            return "8";
+        case BTN_9:
+            return "9";
+        case BTN_DN:
+            return "DOWN";
+        case BTN_UP:
+            return "UP";
+        case BTN_L:
+            return "LEFT";
+        case BTN_R:
+            return "RIGHT";
+        case BTN_OK:
+            return "OK";
+    }
+    return "";
+}
 
+// TODO: rename to CodeManager and move EEPROM storage there?
 Lock lock;
 OneButtonTiny* resetBtn;
 auto timer = timer_create_default();
 
+// TODO: all these to CodeManager?
 short codeBufferPtr = -1;
 bool listeningToOpen = false;
 bool listeningToChangeCode = false;
@@ -54,18 +96,22 @@ unsigned char codeBuffer[4] = {LOCK_DEFAULT_DIGIT_0,LOCK_DEFAULT_DIGIT_1,LOCK_DE
 void printCurrentCode();
 void saveCode();
 void loadCode();
+static void factoryReset();
 
-void* doorClosingTask;
+// TODO: class Lock?
+void* doorLockingTask;
 int isDoorUnlocked();
 void unlockDoor();
 bool lockDoor(void*);
+void unlockDoorAndScheduleLocking();
 
+
+// TODO: class RemoteInput?
 void stopListeningForCode();
 void listenForCodeToOpen();
 void listenForNewCode();
 
-static void factoryReset();
-
+// TODO: class StatusLEDOutput?
 bool statusLEDOn(void*);
 bool statusLEDOff(void*);
 void shortBlink();
@@ -73,7 +119,6 @@ void longBlink();
 void doubleBlink();
 void tripleBlink();
 
-void unlockDoorAndScheduleLocking();
 
 void setup() {
     pinMode(DOOR_PIN, OUTPUT);
@@ -132,8 +177,10 @@ void loop() {
             Serial.print(F("Address=0x"));
             Serial.print(sCallbackData.Address, HEX);
             Serial.print(F(" Command=0x"));
-
             Serial.print(sCallbackData.Command, HEX);
+            Serial.print(F(" Btn="));
+            Serial.print(findButtonName(sCallbackData.Command));
+
             if (sCallbackData.Flags == IRDATA_FLAGS_PARITY_FAILED) {
                 Serial.print(F(" Parity failed"));
             }
@@ -173,6 +220,8 @@ void loop() {
     }
 
 }
+
+//char* findButtonName(unsigned char code)
 
 void listenForNewCode()
 {
@@ -236,22 +285,19 @@ void handleReceivedTinyIRData(uint8_t aAddress, uint8_t aCommand, uint8_t aFlags
 
 void printCurrentCode()
 {
-    Serial.print("Current code: 0x");
-    Serial.print(lock.getCode()[0], HEX);
-    Serial.print(" 0x");
-    Serial.print(lock.getCode()[1], HEX);
-    Serial.print(" 0x");
-    Serial.print(lock.getCode()[2], HEX);
-    Serial.print(" 0x");
-    Serial.print(lock.getCode()[3], HEX);
+    Serial.print("Current code: ");
+    Serial.print(findButtonName(lock.getCode()[0]));
+    Serial.print(findButtonName(lock.getCode()[1]));
+    Serial.print(findButtonName(lock.getCode()[2]));
+    Serial.print(findButtonName(lock.getCode()[3]));
     Serial.println();
 }
 
 void unlockDoorAndScheduleLocking()
 {
-    timer.cancel(doorClosingTask);
+    timer.cancel(doorLockingTask);
     unlockDoor();
-    doorClosingTask = timer.in(DOOR_OPEN_TIME_MS, lockDoor);
+    doorLockingTask = timer.in(DOOR_OPEN_TIME_MS, lockDoor);
 }
 
 int isDoorUnlocked() { return digitalRead(DOOR_PIN); }
