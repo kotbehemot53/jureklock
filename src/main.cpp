@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <EEPROM.h>
-#include <../.pio/libdeps/program_via_ArduinoISP/IRremote/src/TinyIRReceiver.hpp>
-#include <../.pio/libdeps/program_via_ArduinoISP/OneButton/src/OneButtonTiny.h>
-#include <../.pio/libdeps/program_via_ArduinoISP/arduino-timer/src/arduino-timer.h>
+#include <../.pio/libdeps/Upload_UART/IRremote/src/TinyIRReceiver.hpp>
+#include <../.pio/libdeps/Upload_UART/OneButton/src/OneButtonTiny.h>
+#include <../.pio/libdeps/Upload_UART/arduino-timer/src/arduino-timer.h>
 #include <../lib/Lock/Lock.h>
 
 //#define IR_RECEIVE_PIN 2
