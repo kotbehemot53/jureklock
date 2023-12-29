@@ -1,14 +1,14 @@
 #include <Arduino.h>
 #include <EEPROM.h>
-#include <../.pio/libdeps/uno/IRremote/src/TinyIRReceiver.hpp>
-#include <../.pio/libdeps/uno/OneButton/src/OneButtonTiny.h>
-#include <../.pio/libdeps/uno/arduino-timer/src/arduino-timer.h>
+#include <../.pio/libdeps/program_via_ArduinoISP/IRremote/src/TinyIRReceiver.hpp>
+#include <../.pio/libdeps/program_via_ArduinoISP/OneButton/src/OneButtonTiny.h>
+#include <../.pio/libdeps/program_via_ArduinoISP/arduino-timer/src/arduino-timer.h>
 #include <../lib/Lock/Lock.h>
 
 //#define IR_RECEIVE_PIN 2
 #define DOOR_PIN 8
 #define NEG_RESET_PIN 9
-#define STATUS_LED_PIN 10
+#define STATUS_LED_PIN 6
 
 #define BTN_UP 0x18
 #define BTN_DN 0x52
