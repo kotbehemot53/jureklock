@@ -7,7 +7,8 @@
 #include <TinyIRReceiver.hpp>
 #include <OneButtonTiny.h>
 #include <arduino-timer.h>
-#include <U8x8lib.h>
+//#include <U8x8lib.h>
+#include <U8g2lib.h>
 
 #include <../lib/Lock/Lock.h>
 
@@ -130,11 +131,14 @@ void doubleBlink();
 void tripleBlink();
 
 // U8x8 constructor for your display
-U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(U8X8_PIN_NONE, 19, 18);
-// Create a U8x8log object
-U8X8LOG u8x8log;
-// Allocate static memory for the U8x8log window
-uint8_t u8log_buffer[U8LOG_WIDTH*U8LOG_HEIGHT];
+//U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(U8X8_PIN_NONE, 19, 18);
+//U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2();
+//U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, 19, 18);
+U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, 19, 18);
+//// Create a U8x8log object
+//U8X8LOG u8x8log;
+//// Allocate static memory for the U8x8log window
+//uint8_t u8log_buffer[U8LOG_WIDTH*U8LOG_HEIGHT];
 
 void setup() {
     pinMode(DOOR_PIN, OUTPUT);
@@ -168,14 +172,16 @@ void setup() {
     // print the current code
     printCurrentCode();
 
-    // Startup U8x8
-    u8x8.begin();
-    // Set a suitable font. This font will be used for U8x8log
-    u8x8.setFont(u8x8_font_chroma48medium8_r);
-    // Start U8x8log, connect to U8x8, set the dimension and assign the static memory
-    u8x8log.begin(u8x8, U8LOG_WIDTH, U8LOG_HEIGHT, u8log_buffer);
-    // Set the U8x8log redraw mode
-    u8x8log.setRedrawMode(1);		// 0: Update screen with newline, 1: Update screen for every char
+//    // Startup U8x8
+//    u8x8.begin();
+//    // Set a suitable font. This font will be used for U8x8log
+//    u8x8.setFont(u8x8_font_chroma48medium8_r);
+//    // Start U8x8log, connect to U8x8, set the dimension and assign the static memory
+//    u8x8log.begin(u8x8, U8LOG_WIDTH, U8LOG_HEIGHT, u8log_buffer);
+//    // Set the U8x8log redraw mode
+//    u8x8log.setRedrawMode(1);		// 0: Update screen with newline, 1: Update screen for every char
+
+    u8g2.begin();
 }
 
 static void factoryReset()
@@ -185,7 +191,12 @@ static void factoryReset()
     codeBuffer[2] = LOCK_DEFAULT_DIGIT_2;
     codeBuffer[3] = LOCK_DEFAULT_DIGIT_3;
     saveCode();
-    u8x8log.print("\nKOD ZRESETOWANY\n");
+//    u8x8log.print("\nKOD ZRESETOWANY\n");
+//    u8g2.clearBuffer();
+//    u8g2.setFont(u8g2_font_ncenB14_tr);
+//    u8g2.drawStr(0,20,"\nKOD ZRESETOWANY\n");
+//    u8g2.sendBuffer();
+
     Serial.println("Factory code reset done.");
     printCurrentCode();
 }
@@ -193,6 +204,13 @@ static void factoryReset()
 void loop() {
     timer.tick();
     resetBtn->tick();
+
+
+//    u8g2.clearBuffer();
+//    u8g2.setFont(u8g2_font_ncenB14_tr);
+//    u8g2.drawStr(0,20,"dawaj kod!\n");
+//    u8g2.sendBuffer();
+
 
     if (sCallbackData.justWritten) {
         sCallbackData.justWritten = false;
@@ -213,7 +231,16 @@ void loop() {
             Serial.println();
 
             if (sCallbackData.Command == BTN_ASTR) {
-                u8x8log.print("dawaj kod!\n");
+//                u8x8log.print("dawaj kod!\n");
+
+
+                u8g2.firstPage();
+                do {
+                    u8g2.setFont(u8g2_font_ncenB14_tr);
+                    u8g2.drawStr(0,24,"Dawaj kod!");
+                } while ( u8g2.nextPage() );
+                u8g2.setCursor(0, 15);
+
                 listenForCodeToOpen();
                 shortBlink();
                 // TODO: introduce keyboard class?
@@ -221,31 +248,39 @@ void loop() {
                 codeBuffer[codeBufferPtr++] = sCallbackData.Command;
                 // Print a number on the U8x8log window
                 // The display will be refreshed
-                u8x8log.print("*");
+//                u8x8log.print("*");
+
+//                if (codeBufferPtr == 0)
+//                u8g2.setFont(u8g2_font_ncenB14_tr);
+//                    u8g2.drawStr(codeBufferPtr * 10,24,"*");
+                u8g2.firstPage();
+                do {
+                    u8g2.print("*");
+                } while ( u8g2.nextPage() );
 
                 if (codeBufferPtr >= 4) {
-                    u8x8log.print("\n");
+//                    u8x8log.print("\n");
 
                     stopListeningForCode();
 
                     if(lock.checkCode(codeBuffer)) {
-                        u8x8log.print("otwarte!\n");
+//                        u8x8log.print("otwarte!\n");
                         unlockDoorAndScheduleLocking();
                     } else {
-                        u8x8log.print("lipa, panie!\n");
+//                        u8x8log.print("lipa, panie!\n");
                         doubleBlink();
                         Serial.println("Code check failed.");
                     }
                 }
             } else if (isDoorUnlocked() && sCallbackData.Command == BTN_HASH) {
-                u8x8log.print("dawaj nowy kod!\n");
+//                u8x8log.print("dawaj nowy kod!\n");
                 listenForNewCode();
                 tripleBlink();
             } else if (listeningToChangeCode && codeBufferPtr < 4 && isNumberButton(sCallbackData.Command)) {
-                u8x8log.print("*");
+//                u8x8log.print("*");
                 codeBuffer[codeBufferPtr++] = sCallbackData.Command;
                 if (codeBufferPtr >= 4) {
-                    u8x8log.print("\nzmienione!\n");
+//                    u8x8log.print("\nzmienione!\n");
                     stopListeningForCode();
 
                     saveCode();
