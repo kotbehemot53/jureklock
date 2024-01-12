@@ -130,11 +130,14 @@ void longBlink();
 void doubleBlink();
 void tripleBlink();
 
+void screenSay(const char *);
+void screenDrawStar(byte);
+
 // U8x8 constructor for your display
 //U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(U8X8_PIN_NONE, 19, 18);
 //U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2();
-//U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, 19, 18);
-U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, 19, 18);
+U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, 19, 18);
+//U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, 19, 18);
 //// Create a U8x8log object
 //U8X8LOG u8x8log;
 //// Allocate static memory for the U8x8log window
@@ -197,6 +200,7 @@ static void factoryReset()
 //    u8g2.drawStr(0,20,"\nKOD ZRESETOWANY\n");
 //    u8g2.sendBuffer();
 
+    screenSay("Zresetowane!");
     Serial.println("Factory code reset done.");
     printCurrentCode();
 }
@@ -233,18 +237,22 @@ void loop() {
             if (sCallbackData.Command == BTN_ASTR) {
 //                u8x8log.print("dawaj kod!\n");
 
-
-                u8g2.firstPage();
-                do {
-                    u8g2.setFont(u8g2_font_ncenB14_tr);
-                    u8g2.drawStr(0,24,"Dawaj kod!");
-                } while ( u8g2.nextPage() );
-                u8g2.setCursor(0, 15);
+//                u8g2.firstPage();
+//                do {
+//                    u8g2.setFont(u8g2_font_ncenB14_tr);
+//                    u8g2.drawStr(0,24,"Dawaj kod!");
+//                } while ( u8g2.nextPage() );
+//                u8g2.setCursor(0, 15);
 
                 listenForCodeToOpen();
                 shortBlink();
+
+                screenSay("Dawaj kod!");
+
                 // TODO: introduce keyboard class?
             } else if (listeningToOpen && codeBufferPtr < 4 && isNumberButton(sCallbackData.Command)) {
+                screenDrawStar(codeBufferPtr);
+
                 codeBuffer[codeBufferPtr++] = sCallbackData.Command;
                 // Print a number on the U8x8log window
                 // The display will be refreshed
@@ -253,10 +261,11 @@ void loop() {
 //                if (codeBufferPtr == 0)
 //                u8g2.setFont(u8g2_font_ncenB14_tr);
 //                    u8g2.drawStr(codeBufferPtr * 10,24,"*");
-                u8g2.firstPage();
-                do {
-                    u8g2.print("*");
-                } while ( u8g2.nextPage() );
+//                u8g2.firstPage();
+//                do {
+//                    u8g2.print("*");
+//                } while ( u8g2.nextPage() );
+
 
                 if (codeBufferPtr >= 4) {
 //                    u8x8log.print("\n");
@@ -266,9 +275,11 @@ void loop() {
                     if(lock.checkCode(codeBuffer)) {
 //                        u8x8log.print("otwarte!\n");
                         unlockDoorAndScheduleLocking();
+                        screenSay("Otwarte!");
                     } else {
 //                        u8x8log.print("lipa, panie!\n");
                         doubleBlink();
+                        screenSay("Lipa, panie!");
                         Serial.println("Code check failed.");
                     }
                 }
@@ -276,7 +287,9 @@ void loop() {
 //                u8x8log.print("dawaj nowy kod!\n");
                 listenForNewCode();
                 tripleBlink();
+                screenSay("Dawaj nowy kod!");
             } else if (listeningToChangeCode && codeBufferPtr < 4 && isNumberButton(sCallbackData.Command)) {
+                screenDrawStar(codeBufferPtr);
 //                u8x8log.print("*");
                 codeBuffer[codeBufferPtr++] = sCallbackData.Command;
                 if (codeBufferPtr >= 4) {
@@ -284,6 +297,7 @@ void loop() {
                     stopListeningForCode();
 
                     saveCode();
+                    screenSay("Kod ustawiony!");
                     Serial.println("Code set.");
                     printCurrentCode();
                     longBlink();
@@ -296,6 +310,25 @@ void loop() {
 //    // Refresh the screen
 //    u8x8log.print("\n");
 
+}
+
+void screenDrawStar(byte starNo)
+{
+    if (starNo == 0)
+    {
+        u8g2.setFont(u8g2_font_calblk36_tr);
+        u8g2.clearBuffer();
+    }
+    u8g2.drawStr(28 + starNo * 20,38,"*");
+    u8g2.sendBuffer();
+}
+
+void screenSay(const char* text)
+{
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_crox4hb_tr);
+    u8g2.drawStr(0,26,text);
+    u8g2.sendBuffer();
 }
 
 //char* findButtonName(unsigned char code)
@@ -381,6 +414,7 @@ int isDoorUnlocked() { return digitalRead(DOOR_PIN); }
 bool lockDoor(void*) {
     digitalWrite(DOOR_PIN, LOW);
     statusLEDOff(NULL);
+    screenSay("Zamkniete!");
     Serial.println("Door locked.");
 
     return false;
