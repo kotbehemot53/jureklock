@@ -1,16 +1,13 @@
 #include <Arduino.h>
 #include <EEPROM.h>
-//#include <../.pio/libdeps/Upload_UART/IRremote/src/TinyIRReceiver.hpp>
-//#include <../.pio/libdeps/Upload_UART/OneButton/src/OneButtonTiny.h>
-//#include <../.pio/libdeps/Upload_UART/arduino-timer/src/arduino-timer.h>
-//#include <U8g2lib.h>
+
 #include <TinyIRReceiver.hpp>
 #include <OneButtonTiny.h>
 #include <arduino-timer.h>
-//#include <U8x8lib.h>
 #include <U8g2lib.h>
 
 #include <../lib/Lock/Lock.h>
+#include <../lib/Game/Game.h>
 
 //#define IR_RECEIVE_PIN 2
 #define DOOR_PIN 8
@@ -37,16 +34,9 @@
 
 #define DOOR_OPEN_TIME_MS 10000 // 10 s
 
-// Define the dimension of the U8x8log window
-#define U8LOG_WIDTH 16
-#define U8LOG_HEIGHT 4
-
 // TODO:
 //      1. refactor (OOP)
-//      2. add screen maybe?
-//      3. add some silly game??
-//      3. migrate to Attiny? avr DA series?
-//      4. self-etched board?
+//      3. migrate to avr DA series?
 //      5. 5V buck converter?
 
 volatile struct TinyIRReceiverCallbackDataStruct sCallbackData;
@@ -130,20 +120,19 @@ void longBlink();
 void doubleBlink();
 void tripleBlink();
 
-void screenSay(const char *);
+// TODO: class screen?
+void screenSay(const char *, byte height = 26);
+void screenSay2Lines(const char *, const char *);
 void screenDrawStar(byte);
+void screenScheduleClear(int timeout);
 bool screenClear(void*);
 void* screenClearingTask;
-
-// U8x8 constructor for your display
-//U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(U8X8_PIN_NONE, 19, 18);
-//U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2();
-//U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, 19, 18);
 U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, 19, 18);
-//// Create a U8x8log object
-//U8X8LOG u8x8log;
-//// Allocate static memory for the U8x8log window
-//uint8_t u8log_buffer[U8LOG_WIDTH*U8LOG_HEIGHT];
+
+// game
+Game game;
+bool gameInProgress = false;
+char gameScoreStr[100];
 
 void setup() {
     pinMode(DOOR_PIN, OUTPUT);
@@ -177,16 +166,8 @@ void setup() {
     // print the current code
     printCurrentCode();
 
-//    // Startup U8x8
-//    u8x8.begin();
-//    // Set a suitable font. This font will be used for U8x8log
-//    u8x8.setFont(u8x8_font_chroma48medium8_r);
-//    // Start U8x8log, connect to U8x8, set the dimension and assign the static memory
-//    u8x8log.begin(u8x8, U8LOG_WIDTH, U8LOG_HEIGHT, u8log_buffer);
-//    // Set the U8x8log redraw mode
-//    u8x8log.setRedrawMode(1);		// 0: Update screen with newline, 1: Update screen for every char
-
     u8g2.begin();
+    randomSeed(analogRead(0));
 }
 
 static void factoryReset()
@@ -196,13 +177,9 @@ static void factoryReset()
     codeBuffer[2] = LOCK_DEFAULT_DIGIT_2;
     codeBuffer[3] = LOCK_DEFAULT_DIGIT_3;
     saveCode();
-//    u8x8log.print("\nKOD ZRESETOWANY\n");
-//    u8g2.clearBuffer();
-//    u8g2.setFont(u8g2_font_ncenB14_tr);
-//    u8g2.drawStr(0,20,"\nKOD ZRESETOWANY\n");
-//    u8g2.sendBuffer();
 
     screenSay("Zresetowane!");
+
     Serial.println("Factory code reset done.");
     printCurrentCode();
 }
@@ -211,13 +188,37 @@ void loop() {
     timer.tick();
     resetBtn->tick();
 
+    // draw game
+    if (gameInProgress) {
+        u8g2.firstPage();
+        do {
+            if (game.isGameOver()) {
+                // draw game over screen
+                sprintf(gameScoreStr, "Score: %d", game.getScore());
+                screenSay2Lines("Game Over!", gameScoreStr);
+                gameInProgress = false;
+                screenScheduleClear(DOOR_OPEN_TIME_MS);
+            } else {
+                // draw main character
+                u8g2.setFont(u8g2_font_unifont_t_animals);
+                u8g2.drawGlyph(game.getMainCharacterPosition(), game.getMainCharacterVerticalPosition(), game.getMainCharacterSymbol());
 
-//    u8g2.clearBuffer();
-//    u8g2.setFont(u8g2_font_ncenB14_tr);
-//    u8g2.drawStr(0,20,"dawaj kod!\n");
-//    u8g2.sendBuffer();
+                // draw obstacles
+                for (byte i = 0; i < game.getObstacleCount(); ++i) {
+                    if (game.isObstacleEnabled(i)) {
+                        u8g2.drawGlyph(game.getObstaclePosition(i), 30, game.getObstacleSymbol(i));
+                    }
+                }
 
+                // draw ground
+                u8g2.drawLine(0, 31, 127, 31);
+            }
+        } while ( u8g2.nextPage() );
 
+        game.tick();
+    }
+
+    // handle button presses
     if (sCallbackData.justWritten) {
         sCallbackData.justWritten = false;
 
@@ -237,14 +238,7 @@ void loop() {
             Serial.println();
 
             if (sCallbackData.Command == BTN_ASTR) {
-//                u8x8log.print("dawaj kod!\n");
-
-//                u8g2.firstPage();
-//                do {
-//                    u8g2.setFont(u8g2_font_ncenB14_tr);
-//                    u8g2.drawStr(0,24,"Dawaj kod!");
-//                } while ( u8g2.nextPage() );
-//                u8g2.setCursor(0, 15);
+                gameInProgress = false;
 
                 listenForCodeToOpen();
                 shortBlink();
@@ -256,46 +250,31 @@ void loop() {
                 screenDrawStar(codeBufferPtr);
 
                 codeBuffer[codeBufferPtr++] = sCallbackData.Command;
-                // Print a number on the U8x8log window
-                // The display will be refreshed
-//                u8x8log.print("*");
-
-//                if (codeBufferPtr == 0)
-//                u8g2.setFont(u8g2_font_ncenB14_tr);
-//                    u8g2.drawStr(codeBufferPtr * 10,24,"*");
-//                u8g2.firstPage();
-//                do {
-//                    u8g2.print("*");
-//                } while ( u8g2.nextPage() );
-
 
                 if (codeBufferPtr >= 4) {
-//                    u8x8log.print("\n");
-
                     stopListeningForCode();
 
                     if(lock.checkCode(codeBuffer)) {
-//                        u8x8log.print("otwarte!\n");
                         unlockDoorAndScheduleLocking();
+
                         screenSay("Otwarte!");
                     } else {
-//                        u8x8log.print("lipa, panie!\n");
                         doubleBlink();
+
                         screenSay("Lipa, panie!");
                         Serial.println("Code check failed.");
                     }
                 }
             } else if (isDoorUnlocked() && sCallbackData.Command == BTN_HASH) {
-//                u8x8log.print("dawaj nowy kod!\n");
                 listenForNewCode();
                 tripleBlink();
+
                 screenSay("Dawaj nowy kod!");
             } else if (listeningToChangeCode && codeBufferPtr < 4 && isNumberButton(sCallbackData.Command)) {
                 screenDrawStar(codeBufferPtr);
-//                u8x8log.print("*");
+
                 codeBuffer[codeBufferPtr++] = sCallbackData.Command;
                 if (codeBufferPtr >= 4) {
-//                    u8x8log.print("\nzmienione!\n");
                     stopListeningForCode();
 
                     saveCode();
@@ -304,14 +283,25 @@ void loop() {
                     printCurrentCode();
                     longBlink();
                 }
+            } else if (sCallbackData.Command == BTN_OK) {
+                if (gameInProgress) {
+                    gameInProgress = false;
+                    screenClear(NULL);
+                } else {
+                    listeningToChangeCode = false;
+                    listeningToOpen = false;
+                    screenClear(NULL);
+
+                    game.initGame();
+                    gameInProgress = true;
+                    screenScheduleClear(DOOR_OPEN_TIME_MS);
+                }
+            } else if (gameInProgress && sCallbackData.Command == BTN_UP) {
+                game.jump();
+                screenScheduleClear(DOOR_OPEN_TIME_MS);
             }
         }
     }
-
-//    // Print a new line, scroll the text window content if required
-//    // Refresh the screen
-//    u8x8log.print("\n");
-
 }
 
 void screenDrawStar(byte starNo)
@@ -323,25 +313,42 @@ void screenDrawStar(byte starNo)
         u8g2.drawStr(20,38,stars[starNo]);
     } while ( u8g2.nextPage() );
 
-    timer.cancel(screenClearingTask);
-    screenClearingTask = timer.in(DOOR_OPEN_TIME_MS, screenClear);
+    screenScheduleClear(DOOR_OPEN_TIME_MS);
 }
 
-void screenSay(const char* text)
+void screenSay(const char* text, byte height)
 {
     u8g2.firstPage();
     do {
         u8g2.setFont(u8g2_font_crox4hb_tr);
-        u8g2.drawStr(0,26,text);
+        u8g2.drawStr(0,height,text);
     } while ( u8g2.nextPage() );
 
+    screenScheduleClear(DOOR_OPEN_TIME_MS);
+}
+
+void screenSay2Lines(const char* text, const char* text2)
+{
+    u8g2.firstPage();
+    do {
+        u8g2.setFont(u8g2_font_helvB12_tr);
+        u8g2.drawStr(0,15,text);
+        u8g2.drawStr(0,31,text2);
+    } while ( u8g2.nextPage() );
+
+    screenScheduleClear(DOOR_OPEN_TIME_MS);
+}
+
+void screenScheduleClear(int timeout)
+{
     timer.cancel(screenClearingTask);
-    screenClearingTask = timer.in(DOOR_OPEN_TIME_MS, screenClear);
+    screenClearingTask = timer.in(timeout, screenClear);
 }
 
 bool screenClear(void*)
 {
     u8g2.clearDisplay();
+    gameInProgress = false;
 
     return false;
 }
