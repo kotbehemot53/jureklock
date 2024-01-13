@@ -132,6 +132,8 @@ void tripleBlink();
 
 void screenSay(const char *);
 void screenDrawStar(byte);
+bool screenClear(void*);
+void* screenClearingTask;
 
 // U8x8 constructor for your display
 //U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(U8X8_PIN_NONE, 19, 18);
@@ -314,33 +316,34 @@ void loop() {
 
 void screenDrawStar(byte starNo)
 {
-//    if (starNo == 0)
-//    {
-//        u8g2.setFont(u8g2_font_calblk36_tr);
-//        u8g2.clearBuffer();
-//    }
-//    u8g2.drawStr(28 + starNo * 20,38,"*");
-//    u8g2.sendBuffer();
-
     char* stars[] = {"*", "* *", "* * *", "* * * *"};
     u8g2.firstPage();
     do {
         u8g2.setFont(u8g2_font_calblk36_tr);
         u8g2.drawStr(20,38,stars[starNo]);
     } while ( u8g2.nextPage() );
+
+    timer.cancel(screenClearingTask);
+    screenClearingTask = timer.in(DOOR_OPEN_TIME_MS, screenClear);
 }
 
 void screenSay(const char* text)
 {
-//    u8g2.clearBuffer();
-//    u8g2.setFont(u8g2_font_crox4hb_tr);
-//    u8g2.drawStr(0,26,text);
-//    u8g2.sendBuffer();
     u8g2.firstPage();
     do {
         u8g2.setFont(u8g2_font_crox4hb_tr);
         u8g2.drawStr(0,26,text);
     } while ( u8g2.nextPage() );
+
+    timer.cancel(screenClearingTask);
+    screenClearingTask = timer.in(DOOR_OPEN_TIME_MS, screenClear);
+}
+
+bool screenClear(void*)
+{
+    u8g2.clearDisplay();
+
+    return false;
 }
 
 //char* findButtonName(unsigned char code)
