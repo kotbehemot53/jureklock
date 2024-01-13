@@ -41,11 +41,8 @@ void Game::tick()
     }
     this->prevTickTime = currentTime;
 
-    // TODO: increase speed
-
     // handle obstacle movement
-    // TODO: use speed
-    byte obstacleOffset = ceil( (deltaTime / SLOWDOWN_FACTOR) * speed );
+    byte obstacleOffset = ceil( (deltaTime / (SLOWDOWN_FACTOR/speed)));// * speed );
     for (byte i = 0; i < this->obstacleCount; ++i) {
         if (this->obstacleEnabled[i]) {
             if (this->obstacleInternalPositions[i] > 0) {
@@ -74,18 +71,23 @@ void Game::tick()
     }
 
     // handle jumps
-    // TODO: use speed
-    this->mainCharacterVerticalPosition -= floor( (deltaTime / SLOWDOWN_FACTOR) * this->mainCharacterVerticalSpeed );
-    this->mainCharacterVerticalSpeed -= GRAVITY;
+    int deltaVert = floor( (deltaTime / (SLOWDOWN_FACTOR)) * this->mainCharacterVerticalSpeed );
+    if (deltaVert > this->mainCharacterVerticalPosition) {
+        deltaVert = this->mainCharacterVerticalPosition;
+    }
+    this->mainCharacterVerticalPosition -= deltaVert;
+    this->mainCharacterVerticalSpeed -= GRAVITY * speed;
     if (this->mainCharacterVerticalPosition >= groundHeight) {
         this->mainCharacterVerticalPosition = groundHeight;
         this->mainCharacterVerticalSpeed = 0;
     }
 
-    // increment score every second
-    if (!this->gameOver && ((currentTime < this->prevScoreTime) || (currentTime - this->prevScoreTime > 1000))) {
+    // increment score every 0.1 s
+    if (!this->gameOver && ((currentTime < this->prevScoreTime) || (currentTime - this->prevScoreTime > 100))) {
         ++score;
         this->prevScoreTime = currentTime;
+
+        speed += 0.005;
     }
 }
 
@@ -127,7 +129,7 @@ bool Game::isGameOver()
 void Game::jump()
 {
     if (this->mainCharacterVerticalPosition >= groundHeight) {
-        this->mainCharacterVerticalSpeed = INIT_JUMP_SPEED;
+        this->mainCharacterVerticalSpeed = INIT_JUMP_SPEED * (1 + 0.33 * (speed - 1));
     }
 }
 

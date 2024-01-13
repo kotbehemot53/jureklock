@@ -17,7 +17,7 @@ private:
     static const int groundHeight = 30;
     static const byte obstacleCount = 10;
 
-    byte mainCharacterSymbol = 43;
+    byte mainCharacterSymbol = 118;
     byte obstacleSymbols[10] = {33, 62, 121, 56, 89, 112, 99, 90, 53, 101};
 
     unsigned long prevTickTime = 0;
@@ -35,7 +35,7 @@ private:
     byte mainCharacterVerticalPosition = 30;
     double mainCharacterVerticalSpeed = 0;
 
-    byte speed = 1;
+    double speed = 1.0;
 
     bool gameOver = false;
 

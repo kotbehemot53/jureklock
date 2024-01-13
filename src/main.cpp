@@ -269,7 +269,7 @@ void loop() {
                 listenForNewCode();
                 tripleBlink();
 
-                screenSay("Dawaj nowy kod!");
+                screenSay("Nowy kod?");
             } else if (listeningToChangeCode && codeBufferPtr < 4 && isNumberButton(sCallbackData.Command)) {
                 screenDrawStar(codeBufferPtr);
 
@@ -278,7 +278,7 @@ void loop() {
                     stopListeningForCode();
 
                     saveCode();
-                    screenSay("Kod ustawiony!");
+                    screenSay("Ustawiony!");
                     Serial.println("Code set.");
                     printCurrentCode();
                     longBlink();
