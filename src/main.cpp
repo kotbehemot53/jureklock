@@ -136,8 +136,8 @@ void screenDrawStar(byte);
 // U8x8 constructor for your display
 //U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8(U8X8_PIN_NONE, 19, 18);
 //U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2();
-U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, 19, 18);
-//U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, 19, 18);
+//U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, 19, 18);
+U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, 19, 18);
 //// Create a U8x8log object
 //U8X8LOG u8x8log;
 //// Allocate static memory for the U8x8log window
@@ -314,21 +314,33 @@ void loop() {
 
 void screenDrawStar(byte starNo)
 {
-    if (starNo == 0)
-    {
+//    if (starNo == 0)
+//    {
+//        u8g2.setFont(u8g2_font_calblk36_tr);
+//        u8g2.clearBuffer();
+//    }
+//    u8g2.drawStr(28 + starNo * 20,38,"*");
+//    u8g2.sendBuffer();
+
+    char* stars[] = {"*", "* *", "* * *", "* * * *"};
+    u8g2.firstPage();
+    do {
         u8g2.setFont(u8g2_font_calblk36_tr);
-        u8g2.clearBuffer();
-    }
-    u8g2.drawStr(28 + starNo * 20,38,"*");
-    u8g2.sendBuffer();
+        u8g2.drawStr(20,38,stars[starNo]);
+    } while ( u8g2.nextPage() );
 }
 
 void screenSay(const char* text)
 {
-    u8g2.clearBuffer();
-    u8g2.setFont(u8g2_font_crox4hb_tr);
-    u8g2.drawStr(0,26,text);
-    u8g2.sendBuffer();
+//    u8g2.clearBuffer();
+//    u8g2.setFont(u8g2_font_crox4hb_tr);
+//    u8g2.drawStr(0,26,text);
+//    u8g2.sendBuffer();
+    u8g2.firstPage();
+    do {
+        u8g2.setFont(u8g2_font_crox4hb_tr);
+        u8g2.drawStr(0,26,text);
+    } while ( u8g2.nextPage() );
 }
 
 //char* findButtonName(unsigned char code)
