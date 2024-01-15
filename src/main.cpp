@@ -121,13 +121,13 @@ void doubleBlink();
 void tripleBlink();
 
 // TODO: class screen?
-void screenSay(const char *, byte height = 26);
+void screenSay(const __FlashStringHelper *, byte height = 26);
 void screenSay2Lines(const char *, const char *);
 void screenDrawStar(byte);
 void screenScheduleClear(int timeout);
 bool screenClear(void*);
 void* screenClearingTask;
-U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, 19, 18);
+U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE); //, 19, 18);
 
 // game
 Game game;
@@ -146,9 +146,9 @@ void setup() {
 
     initPCIInterruptForTinyReceiver();
 
-    Serial.begin(115200);
-
-    Serial.println("Hullo");
+//    Serial.begin(115200);
+//
+//    Serial.println("Hullo");
 
     // save a default code if non has been set yet
     if (
@@ -178,9 +178,9 @@ static void factoryReset()
     codeBuffer[3] = LOCK_DEFAULT_DIGIT_3;
     saveCode();
 
-    screenSay("Zresetowane!");
+    screenSay(F("Zresetowane!"));
 
-    Serial.println("Factory code reset done.");
+//    Serial.println("Factory code reset done.");
     printCurrentCode();
 }
 
@@ -225,17 +225,17 @@ void loop() {
         if (sCallbackData.Flags != IRDATA_FLAGS_IS_REPEAT) {
 
             // TODO: debug method?
-            Serial.print(F("Address=0x"));
-            Serial.print(sCallbackData.Address, HEX);
-            Serial.print(F(" Command=0x"));
-            Serial.print(sCallbackData.Command, HEX);
-            Serial.print(F(" Btn="));
-            Serial.print(findButtonName(sCallbackData.Command));
+//            Serial.print(F("Address=0x"));
+//            Serial.print(sCallbackData.Address, HEX);
+//            Serial.print(F(" Command=0x"));
+//            Serial.print(sCallbackData.Command, HEX);
+//            Serial.print(F(" Btn="));
+//            Serial.print(findButtonName(sCallbackData.Command));
 
             if (sCallbackData.Flags == IRDATA_FLAGS_PARITY_FAILED) {
-                Serial.print(F(" Parity failed"));
+//                Serial.print(F(" Parity failed"));
             }
-            Serial.println();
+//            Serial.println();
 
             if (sCallbackData.Command == BTN_ASTR) {
                 gameInProgress = false;
@@ -243,7 +243,7 @@ void loop() {
                 listenForCodeToOpen();
                 shortBlink();
 
-                screenSay("Dawaj kod!");
+                screenSay(F("Dawaj kod!"));
 
                 // TODO: introduce keyboard class?
             } else if (listeningToOpen && codeBufferPtr < 4 && isNumberButton(sCallbackData.Command)) {
@@ -257,19 +257,19 @@ void loop() {
                     if(lock.checkCode(codeBuffer)) {
                         unlockDoorAndScheduleLocking();
 
-                        screenSay("Otwarte!");
+                        screenSay(F("Otwarte!"));
                     } else {
                         doubleBlink();
 
-                        screenSay("Lipa, panie!");
-                        Serial.println("Code check failed.");
+                        screenSay(F("Lipa, panie!"));
+//                        Serial.println("Code check failed.");
                     }
                 }
             } else if (isDoorUnlocked() && sCallbackData.Command == BTN_HASH) {
                 listenForNewCode();
                 tripleBlink();
 
-                screenSay("Nowy kod?");
+                screenSay(F("Nowy kod?"));
             } else if (listeningToChangeCode && codeBufferPtr < 4 && isNumberButton(sCallbackData.Command)) {
                 screenDrawStar(codeBufferPtr);
 
@@ -278,8 +278,8 @@ void loop() {
                     stopListeningForCode();
 
                     saveCode();
-                    screenSay("Ustawiony!");
-                    Serial.println("Code set.");
+                    screenSay(F("Ustawiony!"));
+//                    Serial.println("Code set.");
                     printCurrentCode();
                     longBlink();
                 }
@@ -316,12 +316,14 @@ void screenDrawStar(byte starNo)
     screenScheduleClear(DOOR_OPEN_TIME_MS);
 }
 
-void screenSay(const char* text, byte height)
+void screenSay(const __FlashStringHelper* text, byte height)
 {
     u8g2.firstPage();
     do {
         u8g2.setFont(u8g2_font_crox4hb_tr);
-        u8g2.drawStr(0,height,text);
+
+        u8g2.setCursor(0, height);
+        u8g2.print(text);
     } while ( u8g2.nextPage() );
 
     screenScheduleClear(DOOR_OPEN_TIME_MS);
@@ -360,7 +362,7 @@ void listenForNewCode()
     codeBufferPtr = 0;
     listeningToOpen = false;
     listeningToChangeCode = true;
-    Serial.println("Listening for new code");
+//    Serial.println("Listening for new code");
 }
 
 void listenForCodeToOpen()
@@ -368,7 +370,7 @@ void listenForCodeToOpen()
     codeBufferPtr = 0;
     listeningToOpen = true;
     listeningToChangeCode = false;
-    Serial.println("Listening for code to open");
+//    Serial.println("Listening for code to open");
 }
 
 void stopListeningForCode()
@@ -417,12 +419,12 @@ void handleReceivedTinyIRData(uint8_t aAddress, uint8_t aCommand, uint8_t aFlags
 
 void printCurrentCode()
 {
-    Serial.print("Current code: ");
-    Serial.print(findButtonName(lock.getCode()[0]));
-    Serial.print(findButtonName(lock.getCode()[1]));
-    Serial.print(findButtonName(lock.getCode()[2]));
-    Serial.print(findButtonName(lock.getCode()[3]));
-    Serial.println();
+//    Serial.print("Current code: ");
+//    Serial.print(findButtonName(lock.getCode()[0]));
+//    Serial.print(findButtonName(lock.getCode()[1]));
+//    Serial.print(findButtonName(lock.getCode()[2]));
+//    Serial.print(findButtonName(lock.getCode()[3]));
+//    Serial.println();
 }
 
 void unlockDoorAndScheduleLocking()
@@ -436,8 +438,8 @@ int isDoorUnlocked() { return digitalRead(DOOR_PIN); }
 bool lockDoor(void*) {
     digitalWrite(DOOR_PIN, LOW);
     statusLEDOff(NULL);
-    screenSay("Zamkniete!");
-    Serial.println("Door locked.");
+    screenSay(F("Zamkniete!"));
+//    Serial.println("Door locked.");
 
     return false;
 }
@@ -445,7 +447,7 @@ void unlockDoor()
 {
     digitalWrite(DOOR_PIN, HIGH);
     statusLEDOn(NULL);
-    Serial.println("Door unlocked.");
+//    Serial.println("Door unlocked.");
 }
 
 bool statusLEDOn(void*)
