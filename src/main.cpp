@@ -295,7 +295,6 @@ void loop() {
                 } else {
                     listeningToChangeCode = false;
                     listeningToOpen = false;
-                    screenScheduleClear(1);
 
                     game.initGame();
                     gameInProgress = true;
