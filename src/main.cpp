@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <EEPROM.h>
 
+#define IR_RECEIVE_PIN 2
+
 #include <TinyIRReceiver.hpp>
 #include <OneButtonTiny.h>
 #include <arduino-timer.h>
@@ -9,7 +11,6 @@
 #include <../lib/Lock/Lock.h>
 #include <../lib/Game/Game.h>
 
-//#define IR_RECEIVE_PIN 2
 #define DOOR_PIN 8
 #define NEG_RESET_PIN 9
 #define STATUS_LED_PIN 6
@@ -43,7 +44,7 @@ volatile struct TinyIRReceiverCallbackDataStruct sCallbackData;
 
 unsigned char numberButtons[10] = {BTN_0, BTN_1, BTN_2, BTN_3, BTN_4, BTN_5, BTN_6, BTN_7, BTN_8, BTN_9};
 bool isNumberButton(unsigned char command);
-inline char* findButtonName(unsigned char code)
+inline const char* findButtonName(unsigned char code)
 {
     switch (code) {
         case BTN_HASH:
@@ -306,7 +307,7 @@ void loop() {
 
 void screenDrawStar(byte starNo)
 {
-    char* stars[] = {"*", "* *", "* * *", "* * * *"};
+    const char* stars[] = {"*", "* *", "* * *", "* * * *"};
     u8g2.firstPage();
     do {
         u8g2.setFont(u8g2_font_calblk36_tr);
