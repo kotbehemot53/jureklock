@@ -39,7 +39,8 @@
 // TODO:
 //      1. refactor (OOP)
 //      3. migrate to avr DA series?
-//      5. 5V buck converter?
+//      4. 5V buck converter?
+//      5. show score live?
 
 volatile struct TinyIRReceiverCallbackDataStruct sCallbackData;
 
@@ -134,7 +135,7 @@ U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE); //, 19, 18)
 // game
 Game game;
 bool gameInProgress = false;
-char gameScoreStr[100];
+char gameScoreStr[100] = "Score: 0";
 
 void setup() {
     pinMode(DOOR_PIN, OUTPUT);
@@ -196,15 +197,16 @@ void loop() {
 
     // draw game
     if (gameInProgress) {
-        u8g2.firstPage();
-        do {
-            if (game.isGameOver()) {
-                // draw game over screen
-                sprintf(gameScoreStr, "Score: %d", game.getScore());
-                screenSay2Lines("Game Over!", gameScoreStr);
-                gameInProgress = false;
-                screenScheduleClear(DOOR_OPEN_TIME_MS);
-            } else {
+        if (game.isGameOver()) {
+            // draw game over screen
+            sprintf(gameScoreStr, "Score: %d", game.getScore());
+            screenSay2Lines("Game Over!", gameScoreStr);
+
+            gameInProgress = false;
+        } else {
+            // make it a separate screen method? which takes game as arg?
+            u8g2.firstPage();
+            do {
                 // draw main character
                 u8g2.setFont(u8g2_font_unifont_t_animals);
                 u8g2.drawGlyph(game.getMainCharacterPosition(), game.getMainCharacterVerticalPosition(), game.getMainCharacterSymbol());
@@ -218,8 +220,8 @@ void loop() {
 
                 // draw ground
                 u8g2.drawLine(0, 31, 127, 31);
-            }
-        } while ( u8g2.nextPage() );
+            } while ( u8g2.nextPage() );
+        }
 
         game.tick();
     }
@@ -292,11 +294,11 @@ void loop() {
             } else if (sCallbackData.Command == BTN_OK) {
                 if (gameInProgress) {
                     gameInProgress = false;
-                    screenClear(NULL);
+                    screenScheduleClear(1);
                 } else {
                     listeningToChangeCode = false;
                     listeningToOpen = false;
-                    screenClear(NULL);
+                    screenScheduleClear(1);
 
                     game.initGame();
                     gameInProgress = true;
