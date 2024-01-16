@@ -230,7 +230,7 @@ void loop() {
     if (sCallbackData.justWritten) {
         sCallbackData.justWritten = false;
 
-        if (sCallbackData.Flags != IRDATA_FLAGS_IS_REPEAT) {
+        if (sCallbackData.Flags != IRDATA_FLAGS_IS_REPEAT && sCallbackData.Flags != IRDATA_FLAGS_PARITY_FAILED) {
 
             // TODO: debug method?
 //            Serial.print(F("Address=0x"));
@@ -240,9 +240,6 @@ void loop() {
 //            Serial.print(F(" Btn="));
 //            Serial.print(findButtonName(sCallbackData.Command));
 
-            if (sCallbackData.Flags == IRDATA_FLAGS_PARITY_FAILED) {
-//                Serial.print(F(" Parity failed"));
-            }
 //            Serial.println();
 
             if (sCallbackData.Command == BTN_ASTR) {
