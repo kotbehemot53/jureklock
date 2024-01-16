@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <EEPROM.h>
+#include <avr/wdt.h>
 
 #define IR_RECEIVE_PIN 2
 
@@ -169,6 +170,8 @@ void setup() {
 
     u8g2.begin();
     randomSeed(analogRead(0));
+
+    wdt_enable(WDTO_2S);
 }
 
 static void factoryReset()
@@ -186,6 +189,8 @@ static void factoryReset()
 }
 
 void loop() {
+    wdt_reset();
+
     timer.tick();
     resetBtn->tick();
 
