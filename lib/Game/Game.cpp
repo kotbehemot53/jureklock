@@ -6,15 +6,12 @@
 
 void Game::initGame()
 {
+    // TODO: turn it into a const and use where 10 is used!
 //    this->obstacleCount = 1;
     for (byte i = 0; i < 10; ++i) {
         this->obstaclePositions[i] = 127;
         this->obstacleInternalPositions[i] = 127;
-        if (i == 0) {
-            this->obstacleEnabled[i] = false;
-        } else {
-            this->obstacleEnabled[i] = false;
-        }
+        this->obstacleEnabled[i] = false;
     }
     this->mainCharacterPosition = 5;
     this->gameStartTime = millis();
