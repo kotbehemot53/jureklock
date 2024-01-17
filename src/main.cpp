@@ -40,7 +40,6 @@
 //      1. refactor (OOP)
 //      3. migrate to avr DA series?
 //      4. 5V buck converter?
-//      5. show score live?
 //      6. po ręcznym zgaszeniu gry, wcisniecie gwiazdki zapala status led na stale??? CZEMU???
 
 volatile struct TinyIRReceiverCallbackDataStruct sCallbackData;
@@ -131,8 +130,7 @@ void screenDrawStar(byte);
 void screenScheduleClear(int timeout);
 bool screenClear(void*);
 void* screenClearingTask;
-//U8G2_SSD1306_128X32_UNIVISION_2_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE); //, 19, 18);
-U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0); //, 19, 18);
+U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0);
 
 // game
 Game game;
@@ -210,28 +208,25 @@ void loop() {
             gameInProgress = false;
         } else {
             // make it a separate screen method? which takes game as arg?
-//            u8g2.firstPage();
-//            do {
-                u8g2.clearBuffer();
-                // draw main character
-                u8g2.setFont(u8g2_font_unifont_t_animals);
-                u8g2.drawGlyph(game.getMainCharacterPosition(), game.getMainCharacterVerticalPosition(), game.getMainCharacterSymbol());
+            u8g2.clearBuffer();
+            // draw main character
+            u8g2.setFont(u8g2_font_unifont_t_animals);
+            u8g2.drawGlyph(game.getMainCharacterPosition(), game.getMainCharacterVerticalPosition(), game.getMainCharacterSymbol());
 
-                // draw obstacles
-                for (byte i = 0; i < game.getObstacleCount(); ++i) {
-                    if (game.isObstacleEnabled(i)) {
-                        u8g2.drawGlyph(game.getObstaclePosition(i), 30, game.getObstacleSymbol(i));
-                    }
+            // draw obstacles
+            for (byte i = 0; i < game.getObstacleCount(); ++i) {
+                if (game.isObstacleEnabled(i)) {
+                    u8g2.drawGlyph(game.getObstaclePosition(i), 30, game.getObstacleSymbol(i));
                 }
+            }
 
-                // draw score
-                u8g2.setFont(u8g2_font_t0_11_mr );
-                u8g2.drawStr(46,10,gameScoreStr);
+            // draw score
+            u8g2.setFont(u8g2_font_t0_11_mr );
+            u8g2.drawStr(46,10,gameScoreStr);
 
-                // draw ground
-                u8g2.drawLine(0, 31, 127, 31);
-                u8g2.sendBuffer();
-//            } while ( u8g2.nextPage() );
+            // draw ground
+            u8g2.drawLine(0, 31, 127, 31);
+            u8g2.sendBuffer();
         }
 
         game.tick();
@@ -322,42 +317,32 @@ void loop() {
 void screenDrawStar(byte starNo)
 {
     const char* stars[] = {"*", "* *", "* * *", "* * * *"};
-//    u8g2.firstPage();
-//    do {
-        u8g2.clearBuffer();
-        u8g2.setFont(u8g2_font_calblk36_tr);
-        u8g2.drawStr(20,38,stars[starNo]);
-        u8g2.sendBuffer();
-//    } while ( u8g2.nextPage() );
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_calblk36_tr);
+    u8g2.drawStr(20,38,stars[starNo]);
+    u8g2.sendBuffer();
 
     screenScheduleClear(DOOR_OPEN_TIME_MS);
 }
 
 void screenSay(const __FlashStringHelper* text, byte height)
 {
-//    u8g2.firstPage();
-//    do {
-        u8g2.clearBuffer();
-        u8g2.setFont(u8g2_font_crox4hb_tr);
-
-        u8g2.setCursor(0, height);
-        u8g2.print(text);
-        u8g2.sendBuffer();
-//    } while ( u8g2.nextPage() );
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_crox4hb_tr);
+    u8g2.setCursor(0, height);
+    u8g2.print(text);
+    u8g2.sendBuffer();
 
     screenScheduleClear(DOOR_OPEN_TIME_MS);
 }
 
 void screenSay2Lines(const char* text, const char* text2)
 {
-//    u8g2.firstPage();
-//    do {
-        u8g2.clearBuffer();
-        u8g2.setFont(u8g2_font_helvB12_tr);
-        u8g2.drawStr(0,15,text);
-        u8g2.drawStr(0,31,text2);
-        u8g2.sendBuffer();
-//    } while ( u8g2.nextPage() );
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_helvB12_tr);
+    u8g2.drawStr(0,15,text);
+    u8g2.drawStr(0,31,text2);
+    u8g2.sendBuffer();
 
     screenScheduleClear(DOOR_OPEN_TIME_MS);
 }
