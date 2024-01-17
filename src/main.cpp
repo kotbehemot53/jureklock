@@ -16,6 +16,29 @@
 #define NEG_RESET_PIN 9
 #define STATUS_LED_PIN 6
 
+
+#ifdef WOKWI_ENABLED
+
+#define BTN_UP 2
+#define BTN_DN 152
+#define BTN_L 224
+#define BTN_R 144
+#define BTN_OK 168
+#define BTN_ASTR 34
+#define BTN_HASH 194
+#define BTN_0 104
+#define BTN_1 48
+#define BTN_2 24
+#define BTN_3 122
+#define BTN_4 16
+#define BTN_5 56
+#define BTN_6 90
+#define BTN_7 66
+#define BTN_8 74
+#define BTN_9 82
+
+#else
+
 #define BTN_UP 0x18
 #define BTN_DN 0x52
 #define BTN_L 0x8
@@ -33,6 +56,8 @@
 #define BTN_7 0x7
 #define BTN_8 0x15
 #define BTN_9 0x9
+
+#endif
 
 #define DOOR_OPEN_TIME_MS 10000 // 10 s
 
