@@ -131,7 +131,8 @@ void screenDrawStar(byte);
 void screenScheduleClear(int timeout);
 bool screenClear(void*);
 void* screenClearingTask;
-U8G2_SSD1306_128X32_UNIVISION_2_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE); //, 19, 18);
+//U8G2_SSD1306_128X32_UNIVISION_2_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE); //, 19, 18);
+U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0); //, 19, 18);
 
 // game
 Game game;
@@ -171,6 +172,7 @@ void setup() {
     printCurrentCode();
 
     u8g2.begin();
+
     randomSeed(analogRead(0));
 
     wdt_enable(WDTO_2S);
@@ -208,8 +210,9 @@ void loop() {
             gameInProgress = false;
         } else {
             // make it a separate screen method? which takes game as arg?
-            u8g2.firstPage();
-            do {
+//            u8g2.firstPage();
+//            do {
+                u8g2.clearBuffer();
                 // draw main character
                 u8g2.setFont(u8g2_font_unifont_t_animals);
                 u8g2.drawGlyph(game.getMainCharacterPosition(), game.getMainCharacterVerticalPosition(), game.getMainCharacterSymbol());
@@ -227,7 +230,8 @@ void loop() {
 
                 // draw ground
                 u8g2.drawLine(0, 31, 127, 31);
-            } while ( u8g2.nextPage() );
+                u8g2.sendBuffer();
+//            } while ( u8g2.nextPage() );
         }
 
         game.tick();
@@ -318,36 +322,42 @@ void loop() {
 void screenDrawStar(byte starNo)
 {
     const char* stars[] = {"*", "* *", "* * *", "* * * *"};
-    u8g2.firstPage();
-    do {
+//    u8g2.firstPage();
+//    do {
+        u8g2.clearBuffer();
         u8g2.setFont(u8g2_font_calblk36_tr);
         u8g2.drawStr(20,38,stars[starNo]);
-    } while ( u8g2.nextPage() );
+        u8g2.sendBuffer();
+//    } while ( u8g2.nextPage() );
 
     screenScheduleClear(DOOR_OPEN_TIME_MS);
 }
 
 void screenSay(const __FlashStringHelper* text, byte height)
 {
-    u8g2.firstPage();
-    do {
+//    u8g2.firstPage();
+//    do {
+        u8g2.clearBuffer();
         u8g2.setFont(u8g2_font_crox4hb_tr);
 
         u8g2.setCursor(0, height);
         u8g2.print(text);
-    } while ( u8g2.nextPage() );
+        u8g2.sendBuffer();
+//    } while ( u8g2.nextPage() );
 
     screenScheduleClear(DOOR_OPEN_TIME_MS);
 }
 
 void screenSay2Lines(const char* text, const char* text2)
 {
-    u8g2.firstPage();
-    do {
+//    u8g2.firstPage();
+//    do {
+        u8g2.clearBuffer();
         u8g2.setFont(u8g2_font_helvB12_tr);
         u8g2.drawStr(0,15,text);
         u8g2.drawStr(0,31,text2);
-    } while ( u8g2.nextPage() );
+        u8g2.sendBuffer();
+//    } while ( u8g2.nextPage() );
 
     screenScheduleClear(DOOR_OPEN_TIME_MS);
 }
