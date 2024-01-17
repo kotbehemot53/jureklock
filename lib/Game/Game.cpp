@@ -6,9 +6,7 @@
 
 void Game::initGame()
 {
-    // TODO: turn it into a const and use where 10 is used!
-//    this->obstacleCount = 1;
-    for (byte i = 0; i < 10; ++i) {
+    for (byte i = 0; i < this->obstacleCount; ++i) {
         this->obstaclePositions[i] = 127;
         this->obstacleInternalPositions[i] = 127;
         this->obstacleEnabled[i] = false;
@@ -23,7 +21,7 @@ void Game::initGame()
     this->mainCharacterVerticalPosition = groundHeight;
     this->mainCharacterVerticalSpeed = 0;
 
-    this->score = 0;
+    this->score = 0.0;
 }
 
 void Game::tick()
@@ -82,7 +80,7 @@ void Game::tick()
     // increment score every 0.1 s
     if (!this->gameOver && ((currentTime < this->prevScoreTime) || (currentTime - this->prevScoreTime > 100))) {
         // TODO: this rounding is shit, use more accurate values, but still do the increments (with speed too?) because millis() overflows from time to time
-        score += ceil((currentTime - this->prevScoreTime) / 100.0);
+        score += (currentTime - this->prevScoreTime) / 100.0;
         this->prevScoreTime = currentTime;
 
         speed += 0.005;
@@ -138,5 +136,5 @@ bool Game::isObstacleEnabled(byte i)
 
 int Game::getScore()
 {
-    return this->score;
+    return int(this->score);
 }

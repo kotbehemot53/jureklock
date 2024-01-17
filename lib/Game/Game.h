@@ -15,6 +15,7 @@ class Game
 {
 private:
     static const int groundHeight = 30;
+    // TODO: turn it into a static const and use where 10 is used!
     static const byte obstacleCount = 10;
 
     byte mainCharacterSymbol = 118;
@@ -25,7 +26,7 @@ private:
     unsigned long prevScoreTime = 0;
     unsigned long gameStartTime = 0;
 
-    int score = 0;
+    double score = 0;
 
     byte obstaclePositions[10] = {127, 127, 127, 127, 127, 127, 127, 127, 127, 127};
     int obstacleInternalPositions[10] = {127, 127, 127, 127, 127, 127, 127, 127, 127, 127};
