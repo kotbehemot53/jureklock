@@ -41,6 +41,7 @@
 //      3. migrate to avr DA series?
 //      4. 5V buck converter?
 //      5. show score live?
+//      6. po ręcznym zgaszeniu gry, wcisniecie gwiazdki zapala status led na stale??? CZEMU???
 
 volatile struct TinyIRReceiverCallbackDataStruct sCallbackData;
 
