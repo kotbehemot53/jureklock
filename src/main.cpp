@@ -198,9 +198,11 @@ void loop() {
 
     // draw game
     if (gameInProgress) {
+        // calculate score string
+        sprintf(gameScoreStr, "Score: %d", game.getScore());
+
         if (game.isGameOver()) {
             // draw game over screen
-            sprintf(gameScoreStr, "Score: %d", game.getScore());
             screenSay2Lines("Game Over!", gameScoreStr);
 
             gameInProgress = false;
@@ -218,6 +220,10 @@ void loop() {
                         u8g2.drawGlyph(game.getObstaclePosition(i), 30, game.getObstacleSymbol(i));
                     }
                 }
+
+                // draw score
+                u8g2.setFont(u8g2_font_t0_11_mr );
+                u8g2.drawStr(46,10,gameScoreStr);
 
                 // draw ground
                 u8g2.drawLine(0, 31, 127, 31);
