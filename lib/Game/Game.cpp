@@ -6,15 +6,10 @@
 
 void Game::initGame()
 {
-//    this->obstacleCount = 1;
-    for (byte i = 0; i < 10; ++i) {
+    for (byte i = 0; i < this->obstacleCount; ++i) {
         this->obstaclePositions[i] = 127;
         this->obstacleInternalPositions[i] = 127;
-        if (i == 0) {
-            this->obstacleEnabled[i] = false;
-        } else {
-            this->obstacleEnabled[i] = false;
-        }
+        this->obstacleEnabled[i] = false;
     }
     this->mainCharacterPosition = 5;
     this->gameStartTime = millis();
@@ -26,7 +21,7 @@ void Game::initGame()
     this->mainCharacterVerticalPosition = groundHeight;
     this->mainCharacterVerticalSpeed = 0;
 
-    this->score = 0;
+    this->score = 0.0;
 }
 
 void Game::tick()
@@ -45,17 +40,19 @@ void Game::tick()
     byte obstacleOffset = ceil( (deltaTime / (SLOWDOWN_FACTOR/speed)));// * speed );
     for (byte i = 0; i < this->obstacleCount; ++i) {
         if (this->obstacleEnabled[i]) {
-            if (this->obstacleInternalPositions[i] > 0) {
+            if (this->obstacleInternalPositions[i] > -16) {
                 this->obstacleInternalPositions[i] -= obstacleOffset;
             } else {
                 this->obstacleEnabled[i] = false;
                 this->obstacleInternalPositions[i] = 127;
             }
-            if (this->obstacleInternalPositions[i] >= 0 && this->obstacleInternalPositions[i] <= 127) {
+            if (this->obstacleInternalPositions[i] >= -16 && this->obstacleInternalPositions[i] <= 127) {
                 this->obstaclePositions[i] = this->obstacleInternalPositions[i];
             }
 
-            if (this->obstacleInternalPositions[i] - this->mainCharacterPosition < 14 && this->mainCharacterVerticalPosition > 20) {
+            if (this->obstacleInternalPositions[i] - this->mainCharacterPosition < 12
+                && this->obstacleInternalPositions[i] - this->mainCharacterPosition > -12
+                && this->mainCharacterVerticalPosition > 20) {
                 this->gameOver = true;
             }
         } else {
@@ -84,7 +81,8 @@ void Game::tick()
 
     // increment score every 0.1 s
     if (!this->gameOver && ((currentTime < this->prevScoreTime) || (currentTime - this->prevScoreTime > 100))) {
-        ++score;
+        // TODO: this rounding is shit, use more accurate values, but still do the increments (with speed too?) because millis() overflows from time to time
+        score += (currentTime - this->prevScoreTime) / 100.0;
         this->prevScoreTime = currentTime;
 
         speed += 0.005;
@@ -96,7 +94,7 @@ byte Game::getObstacleCount()
     return obstacleCount;
 }
 
-byte Game::getObstaclePosition(byte i)
+int Game::getObstaclePosition(byte i)
 {
     return this->obstaclePositions[i];
 }
@@ -140,5 +138,5 @@ bool Game::isObstacleEnabled(byte i)
 
 int Game::getScore()
 {
-    return this->score;
+    return int(this->score);
 }

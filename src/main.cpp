@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <EEPROM.h>
+#include <avr/wdt.h>
 
 #define IR_RECEIVE_PIN 2
 
@@ -38,7 +39,8 @@
 // TODO:
 //      1. refactor (OOP)
 //      3. migrate to avr DA series?
-//      5. 5V buck converter?
+//      4. 5V buck converter?
+//      6. po ręcznym zgaszeniu gry, wcisniecie gwiazdki zapala status led na stale??? CZEMU???
 
 volatile struct TinyIRReceiverCallbackDataStruct sCallbackData;
 
@@ -128,12 +130,12 @@ void screenDrawStar(byte);
 void screenScheduleClear(int timeout);
 bool screenClear(void*);
 void* screenClearingTask;
-U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE); //, 19, 18);
+U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0);
 
 // game
 Game game;
 bool gameInProgress = false;
-char gameScoreStr[100];
+char gameScoreStr[100] = "Score: 0";
 
 void setup() {
     pinMode(DOOR_PIN, OUTPUT);
@@ -168,7 +170,10 @@ void setup() {
     printCurrentCode();
 
     u8g2.begin();
+
     randomSeed(analogRead(0));
+
+    wdt_enable(WDTO_2S);
 }
 
 static void factoryReset()
@@ -186,35 +191,43 @@ static void factoryReset()
 }
 
 void loop() {
+    wdt_reset();
+
     timer.tick();
     resetBtn->tick();
 
     // draw game
     if (gameInProgress) {
-        u8g2.firstPage();
-        do {
-            if (game.isGameOver()) {
-                // draw game over screen
-                sprintf(gameScoreStr, "Score: %d", game.getScore());
-                screenSay2Lines("Game Over!", gameScoreStr);
-                gameInProgress = false;
-                screenScheduleClear(DOOR_OPEN_TIME_MS);
-            } else {
-                // draw main character
-                u8g2.setFont(u8g2_font_unifont_t_animals);
-                u8g2.drawGlyph(game.getMainCharacterPosition(), game.getMainCharacterVerticalPosition(), game.getMainCharacterSymbol());
+        // calculate score string
+        sprintf(gameScoreStr, "Score: %d", game.getScore());
 
-                // draw obstacles
-                for (byte i = 0; i < game.getObstacleCount(); ++i) {
-                    if (game.isObstacleEnabled(i)) {
-                        u8g2.drawGlyph(game.getObstaclePosition(i), 30, game.getObstacleSymbol(i));
-                    }
+        if (game.isGameOver()) {
+            // draw game over screen
+            screenSay2Lines("Game Over!", gameScoreStr);
+
+            gameInProgress = false;
+        } else {
+            // make it a separate screen method? which takes game as arg?
+            u8g2.clearBuffer();
+            // draw main character
+            u8g2.setFont(u8g2_font_unifont_t_animals);
+            u8g2.drawGlyph(game.getMainCharacterPosition(), game.getMainCharacterVerticalPosition(), game.getMainCharacterSymbol());
+
+            // draw obstacles
+            for (byte i = 0; i < game.getObstacleCount(); ++i) {
+                if (game.isObstacleEnabled(i)) {
+                    u8g2.drawGlyph(game.getObstaclePosition(i), 30, game.getObstacleSymbol(i));
                 }
-
-                // draw ground
-                u8g2.drawLine(0, 31, 127, 31);
             }
-        } while ( u8g2.nextPage() );
+
+            // draw score
+            u8g2.setFont(u8g2_font_t0_11_mr );
+            u8g2.drawStr(46,10,gameScoreStr);
+
+            // draw ground
+            u8g2.drawLine(0, 31, 127, 31);
+            u8g2.sendBuffer();
+        }
 
         game.tick();
     }
@@ -223,7 +236,7 @@ void loop() {
     if (sCallbackData.justWritten) {
         sCallbackData.justWritten = false;
 
-        if (sCallbackData.Flags != IRDATA_FLAGS_IS_REPEAT) {
+        if (sCallbackData.Flags != IRDATA_FLAGS_IS_REPEAT && sCallbackData.Flags != IRDATA_FLAGS_PARITY_FAILED) {
 
             // TODO: debug method?
 //            Serial.print(F("Address=0x"));
@@ -233,9 +246,6 @@ void loop() {
 //            Serial.print(F(" Btn="));
 //            Serial.print(findButtonName(sCallbackData.Command));
 
-            if (sCallbackData.Flags == IRDATA_FLAGS_PARITY_FAILED) {
-//                Serial.print(F(" Parity failed"));
-            }
 //            Serial.println();
 
             if (sCallbackData.Command == BTN_ASTR) {
@@ -287,11 +297,10 @@ void loop() {
             } else if (sCallbackData.Command == BTN_OK) {
                 if (gameInProgress) {
                     gameInProgress = false;
-                    screenClear(NULL);
+                    screenScheduleClear(1);
                 } else {
                     listeningToChangeCode = false;
                     listeningToOpen = false;
-                    screenClear(NULL);
 
                     game.initGame();
                     gameInProgress = true;
@@ -308,36 +317,32 @@ void loop() {
 void screenDrawStar(byte starNo)
 {
     const char* stars[] = {"*", "* *", "* * *", "* * * *"};
-    u8g2.firstPage();
-    do {
-        u8g2.setFont(u8g2_font_calblk36_tr);
-        u8g2.drawStr(20,38,stars[starNo]);
-    } while ( u8g2.nextPage() );
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_calblk36_tr);
+    u8g2.drawStr(20,38,stars[starNo]);
+    u8g2.sendBuffer();
 
     screenScheduleClear(DOOR_OPEN_TIME_MS);
 }
 
 void screenSay(const __FlashStringHelper* text, byte height)
 {
-    u8g2.firstPage();
-    do {
-        u8g2.setFont(u8g2_font_crox4hb_tr);
-
-        u8g2.setCursor(0, height);
-        u8g2.print(text);
-    } while ( u8g2.nextPage() );
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_crox4hb_tr);
+    u8g2.setCursor(0, height);
+    u8g2.print(text);
+    u8g2.sendBuffer();
 
     screenScheduleClear(DOOR_OPEN_TIME_MS);
 }
 
 void screenSay2Lines(const char* text, const char* text2)
 {
-    u8g2.firstPage();
-    do {
-        u8g2.setFont(u8g2_font_helvB12_tr);
-        u8g2.drawStr(0,15,text);
-        u8g2.drawStr(0,31,text2);
-    } while ( u8g2.nextPage() );
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_helvB12_tr);
+    u8g2.drawStr(0,15,text);
+    u8g2.drawStr(0,31,text2);
+    u8g2.sendBuffer();
 
     screenScheduleClear(DOOR_OPEN_TIME_MS);
 }
