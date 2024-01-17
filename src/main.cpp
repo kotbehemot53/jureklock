@@ -161,7 +161,7 @@ U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0);
 // game
 Game game;
 bool gameInProgress = false;
-char gameScoreStr[100] = "Pts: 0";
+char gameScoreStr[100] = "Wynik: 0";
 
 void setup() {
     pinMode(DOOR_PIN, OUTPUT);
@@ -222,11 +222,11 @@ void loop() {
     // draw game
     if (gameInProgress) {
         // calculate score string
-        sprintf(gameScoreStr, "Pts: %d", game.getScore());
+        sprintf(gameScoreStr, "Wynik: %d", game.getScore());
 
         if (game.isGameOver()) {
             // draw game over screen
-            screenSay2Lines("Game Over!", gameScoreStr);
+            screenSay2Lines("Koniec!", gameScoreStr);
 
             gameInProgress = false;
         } else {
