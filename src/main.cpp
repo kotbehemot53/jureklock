@@ -88,7 +88,8 @@ inline const char* findButtonName(unsigned char code)
 }
 
 // TODO: rename to CodeManager and move EEPROM storage there?
-Lock lock;
+unsigned char defaultCode[4] = {BTN_1,BTN_1,BTN_1,BTN_1};
+Lock lock(defaultCode);
 OneButtonTiny* resetBtn;
 auto timer = timer_create_default();
 
@@ -96,7 +97,7 @@ auto timer = timer_create_default();
 short codeBufferPtr = -1;
 bool listeningToOpen = false;
 bool listeningToChangeCode = false;
-unsigned char codeBuffer[4] = {LOCK_DEFAULT_DIGIT_0,LOCK_DEFAULT_DIGIT_1,LOCK_DEFAULT_DIGIT_2,LOCK_DEFAULT_DIGIT_3};
+unsigned char codeBuffer[4] = {defaultCode[0],defaultCode[1],defaultCode[2],defaultCode[3]};
 void printCurrentCode();
 void saveCode();
 void loadCode();
@@ -135,7 +136,7 @@ U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0);
 // game
 Game game;
 bool gameInProgress = false;
-char gameScoreStr[100] = "Score: 0";
+char gameScoreStr[100] = "Pts: 0";
 
 void setup() {
     pinMode(DOOR_PIN, OUTPUT);
@@ -178,10 +179,7 @@ void setup() {
 
 static void factoryReset()
 {
-    codeBuffer[0] = LOCK_DEFAULT_DIGIT_0;
-    codeBuffer[1] = LOCK_DEFAULT_DIGIT_1;
-    codeBuffer[2] = LOCK_DEFAULT_DIGIT_2;
-    codeBuffer[3] = LOCK_DEFAULT_DIGIT_3;
+    memcpy(codeBuffer, defaultCode, 4*sizeof(unsigned char));
     saveCode();
 
     screenSay(F("Zresetowane!"));
@@ -199,7 +197,7 @@ void loop() {
     // draw game
     if (gameInProgress) {
         // calculate score string
-        sprintf(gameScoreStr, "Score: %d", game.getScore());
+        sprintf(gameScoreStr, "Pts: %d", game.getScore());
 
         if (game.isGameOver()) {
             // draw game over screen

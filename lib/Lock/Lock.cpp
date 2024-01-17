@@ -2,6 +2,14 @@
 // Created by behemot on 27.12.2023.
 //
 #include "Lock.h"
+#include <string.h>
+
+Lock::Lock() {
+}
+
+Lock::Lock(unsigned char defaultCode[4]) {
+    memcpy(this->code, defaultCode, 4*sizeof(unsigned char));
+}
 
 void Lock::setCode(unsigned char newCode[4])
 {
