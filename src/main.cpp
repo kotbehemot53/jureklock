@@ -131,7 +131,7 @@ void screenDrawStar(byte);
 void screenScheduleClear(int timeout);
 bool screenClear(void*);
 void* screenClearingTask;
-U8G2_SSD1306_128X32_UNIVISION_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE); //, 19, 18);
+U8G2_SSD1306_128X32_UNIVISION_2_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE); //, 19, 18);
 
 // game
 Game game;
