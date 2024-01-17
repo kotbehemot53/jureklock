@@ -28,7 +28,7 @@ private:
 
     double score = 0;
 
-    byte obstaclePositions[10] = {127, 127, 127, 127, 127, 127, 127, 127, 127, 127};
+    int obstaclePositions[10] = {127, 127, 127, 127, 127, 127, 127, 127, 127, 127};
     int obstacleInternalPositions[10] = {127, 127, 127, 127, 127, 127, 127, 127, 127, 127};
     bool obstacleEnabled[10] = {true, false, false, false, false, false, false, false, false, false};
 
@@ -44,7 +44,7 @@ public:
     void initGame();
     void tick();
     byte getObstacleCount();
-    byte getObstaclePosition(byte i);
+    int getObstaclePosition(byte i);
     byte getObstacleSymbol(byte i);
     bool isObstacleEnabled(byte i);
     byte getMainCharacterPosition();
