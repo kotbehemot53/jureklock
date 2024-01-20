@@ -63,67 +63,70 @@
 
 // TODO:
 //      1. refactor (OOP)
-//      3. migrate to avr DA series?
-//      4. 5V buck converter?
-//      6. po ręcznym zgaszeniu gry, wcisniecie gwiazdki zapala status led na stale??? CZEMU???
+//      2. migrate to avr DA series?
+//      3. 5V buck converter?
+//      4. after manual game turn-off, pressing asterisk causes permanent status light, instead of a blink - why???
 
 volatile struct TinyIRReceiverCallbackDataStruct sCallbackData;
 
 unsigned char numberButtons[10] = {BTN_0, BTN_1, BTN_2, BTN_3, BTN_4, BTN_5, BTN_6, BTN_7, BTN_8, BTN_9};
 bool isNumberButton(unsigned char command);
-inline const char* findButtonName(unsigned char code)
-{
-    switch (code) {
-        case BTN_HASH:
-            return "#";
-        case BTN_ASTR:
-            return "*";
-        case BTN_0:
-            return "0";
-        case BTN_1:
-            return "1";
-        case BTN_2:
-            return "2";
-        case BTN_3:
-            return "3";
-        case BTN_4:
-            return "4";
-        case BTN_5:
-            return "5";
-        case BTN_6:
-            return "6";
-        case BTN_7:
-            return "7";
-        case BTN_8:
-            return "8";
-        case BTN_9:
-            return "9";
-        case BTN_DN:
-            return "DOWN";
-        case BTN_UP:
-            return "UP";
-        case BTN_L:
-            return "LEFT";
-        case BTN_R:
-            return "RIGHT";
-        case BTN_OK:
-            return "OK";
-    }
-    return "";
-}
+//inline const char* findButtonName(unsigned char code)
+//{
+//    switch (code) {
+//        case BTN_HASH:
+//            return "#";
+//        case BTN_ASTR:
+//            return "*";
+//        case BTN_0:
+//            return "0";
+//        case BTN_1:
+//            return "1";
+//        case BTN_2:
+//            return "2";
+//        case BTN_3:
+//            return "3";
+//        case BTN_4:
+//            return "4";
+//        case BTN_5:
+//            return "5";
+//        case BTN_6:
+//            return "6";
+//        case BTN_7:
+//            return "7";
+//        case BTN_8:
+//            return "8";
+//        case BTN_9:
+//            return "9";
+//        case BTN_DN:
+//            return "DOWN";
+//        case BTN_UP:
+//            return "UP";
+//        case BTN_L:
+//            return "LEFT";
+//        case BTN_R:
+//            return "RIGHT";
+//        case BTN_OK:
+//            return "OK";
+//    }
+//    return "";
+//}
+
+auto timer = timer_create_default();
 
 // TODO: rename to CodeManager and move EEPROM storage there?
 unsigned char defaultCode[4] = {BTN_1,BTN_1,BTN_1,BTN_1};
 Lock lock(defaultCode);
 OneButtonTiny* resetBtn;
-auto timer = timer_create_default();
+
+// TODO: debug class?
+void printCurrentCode();
 
 // TODO: all these to CodeManager?
+unsigned char codeBuffer[4] = {defaultCode[0],defaultCode[1],defaultCode[2],defaultCode[3]};
 short codeBufferPtr = -1;
 bool listeningToOpen = false;
 bool listeningToChangeCode = false;
-unsigned char codeBuffer[4] = {defaultCode[0],defaultCode[1],defaultCode[2],defaultCode[3]};
-void printCurrentCode();
 void saveCode();
 void loadCode();
 static void factoryReset();
