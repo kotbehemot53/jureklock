@@ -1,2 +1,2 @@
 # jureklock
-A simple IR-controlled electronic door lock with a little game.
+A simple IR-controlled electronic door codeManager with a little game.
