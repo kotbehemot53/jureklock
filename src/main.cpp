@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <EEPROM.h>
+//#include <EEPROM.h>
 #include <avr/wdt.h>
 
 #define IR_RECEIVE_PIN 2
@@ -9,8 +9,9 @@
 #include <arduino-timer.h>
 #include <U8g2lib.h>
 
-#include <../lib/Lock/Lock.h>
-#include <../lib/Game/Game.h>
+#include "CodeManager.h"
+#include "Lock.h"
+#include "Game.h"
 
 #define DOOR_PIN 8
 #define NEG_RESET_PIN 9
@@ -113,33 +114,27 @@ bool isNumberButton(unsigned char command);
 //}
 
 auto timer = timer_create_default();
+static void factoryReset();
 
-// TODO: rename to CodeManager and move EEPROM storage there?
-unsigned char defaultCode[4] = {BTN_1,BTN_1,BTN_1,BTN_1};
-Lock lock(defaultCode);
+unsigned const char defaultCode[4] = {BTN_1,BTN_1,BTN_1,BTN_1};
+CodeManager codeManager(defaultCode);
+Lock lock(DOOR_PIN);
+
 OneButtonTiny* resetBtn;
 
 // TODO: debug class?
 void printCurrentCode();
 
-// TODO: all these to CodeManager?
+// TODO: some orchestrator class?
+void* doorLockingTask;
+bool lockDoor(void*);
+void unlockDoorAndScheduleLocking();
+
+// TODO: class RemoteInput?
 unsigned char codeBuffer[4] = {defaultCode[0],defaultCode[1],defaultCode[2],defaultCode[3]};
 short codeBufferPtr = -1;
 bool listeningToOpen = false;
 bool listeningToChangeCode = false;
-void saveCode();
-void loadCode();
-static void factoryReset();
-
-// TODO: class Lock?
-void* doorLockingTask;
-int isDoorUnlocked();
-void unlockDoor();
-bool lockDoor(void*);
-void unlockDoorAndScheduleLocking();
-
-
-// TODO: class RemoteInput?
 void stopListeningForCode();
 void listenForCodeToOpen();
 void listenForNewCode();
@@ -179,24 +174,22 @@ void setup() {
     initPCIInterruptForTinyReceiver();
 
 //    Serial.begin(115200);
-//
 //    Serial.println("Hullo");
 
     // save a default code if non has been set yet
     if (
-        !isNumberButton(EEPROM.read(0)) ||
-        !isNumberButton(EEPROM.read(1)) ||
-        !isNumberButton(EEPROM.read(2)) ||
-        !isNumberButton(EEPROM.read(3))
+        !isNumberButton(codeManager.getCode()[0]) ||
+        !isNumberButton(codeManager.getCode()[1]) ||
+        !isNumberButton(codeManager.getCode()[2]) ||
+        !isNumberButton(codeManager.getCode()[3])
     ) {
-        factoryReset();
+//        Serial.println(codeManager.getCode()[0]);
+//        Serial.println(codeManager.getCode()[1]);
+//        Serial.println(codeManager.getCode()[2]);
+//        Serial.println(codeManager.getCode()[3]);
+        codeManager.factoryReset();
+//        Serial.println("Zresetowano!");
     }
-
-    // initialize saved code
-    loadCode();
-
-    // print the current code
-    printCurrentCode();
 
     u8g2.begin();
 
@@ -205,16 +198,6 @@ void setup() {
     wdt_enable(WDTO_2S);
 }
 
-static void factoryReset()
-{
-    memcpy(codeBuffer, defaultCode, 4*sizeof(unsigned char));
-    saveCode();
-
-    screenSay(F("Zresetowane!"));
-
-//    Serial.println("Factory code reset done.");
-    printCurrentCode();
-}
 
 void loop() {
     wdt_reset();
@@ -291,7 +274,7 @@ void loop() {
                 if (codeBufferPtr >= 4) {
                     stopListeningForCode();
 
-                    if(lock.checkCode(codeBuffer)) {
+                    if(codeManager.checkCode(codeBuffer)) {
                         unlockDoorAndScheduleLocking();
 
                         screenSay(F("Otwarte!"));
@@ -302,7 +285,7 @@ void loop() {
 //                        Serial.println("Code check failed.");
                     }
                 }
-            } else if (isDoorUnlocked() && sCallbackData.Command == BTN_HASH) {
+            } else if (lock.isUnlocked() && sCallbackData.Command == BTN_HASH) {
                 listenForNewCode();
                 tripleBlink();
 
@@ -314,10 +297,11 @@ void loop() {
                 if (codeBufferPtr >= 4) {
                     stopListeningForCode();
 
-                    saveCode();
+                    codeManager.saveCode(codeBuffer);
+
                     screenSay(F("Ustawiony!"));
 //                    Serial.println("Code set.");
-                    printCurrentCode();
+//                    printCurrentCode();
                     longBlink();
                 }
             } else if (sCallbackData.Command == BTN_OK) {
@@ -423,24 +407,8 @@ bool isNumberButton(unsigned char command)
     return false;
 }
 
-void saveCode()
-{
-    codeBufferPtr = -1;
-    for (short i = 0; i < 4; i++) {
-        EEPROM.write(i, codeBuffer[i]);
-    }
-    // TODO: maybe the lock should save it in memory and retrieve it? or not?
-    lock.setCode(codeBuffer);
-}
 
-void loadCode()
-{
-    codeBufferPtr = -1;
-    for (short i = 0; i < 4; i++) {
-        codeBuffer[i] = EEPROM.read(i);
-    }
-    lock.setCode(codeBuffer);
-}
+
 
 void handleReceivedTinyIRData(uint8_t aAddress, uint8_t aCommand, uint8_t aFlags)
 {
@@ -452,23 +420,22 @@ void handleReceivedTinyIRData(uint8_t aAddress, uint8_t aCommand, uint8_t aFlags
 void printCurrentCode()
 {
 //    Serial.print("Current code: ");
-//    Serial.print(findButtonName(lock.getCode()[0]));
-//    Serial.print(findButtonName(lock.getCode()[1]));
-//    Serial.print(findButtonName(lock.getCode()[2]));
-//    Serial.print(findButtonName(lock.getCode()[3]));
+//    Serial.print(findButtonName(codeManager.getCode()[0]));
+//    Serial.print(findButtonName(codeManager.getCode()[1]));
+//    Serial.print(findButtonName(codeManager.getCode()[2]));
+//    Serial.print(findButtonName(codeManager.getCode()[3]));
 //    Serial.println();
 }
 
 void unlockDoorAndScheduleLocking()
 {
     timer.cancel(doorLockingTask);
-    unlockDoor();
+    lock.unlock();
     doorLockingTask = timer.in(DOOR_OPEN_TIME_MS, lockDoor);
 }
 
-int isDoorUnlocked() { return digitalRead(DOOR_PIN); }
 bool lockDoor(void*) {
-    digitalWrite(DOOR_PIN, LOW);
+    lock.lock();
     statusLEDOff(NULL);
     screenSay(F("Zamkniete!"));
 //    Serial.println("Door locked.");
@@ -477,7 +444,7 @@ bool lockDoor(void*) {
 }
 void unlockDoor()
 {
-    digitalWrite(DOOR_PIN, HIGH);
+    lock.unlock();
     statusLEDOn(NULL);
 //    Serial.println("Door unlocked.");
 }
@@ -524,4 +491,10 @@ void tripleBlink()
     timer.in(300, statusLEDOff);
     timer.in(400, statusLEDOn);
     timer.in(500, statusLEDOff);
+}
+
+void factoryReset()
+{
+    codeManager.factoryReset();
+    screenSay(F("Zresetowane!"));
 }
