@@ -10,7 +10,8 @@
 #include <U8g2lib.h>
 
 #include "CodeManager.h"
-#include <../lib/Game/Game.h>
+#include "Lock.h"
+#include "Game.h"
 
 #define DOOR_PIN 8
 #define NEG_RESET_PIN 9
@@ -117,16 +118,15 @@ static void factoryReset();
 
 unsigned const char defaultCode[4] = {BTN_1,BTN_1,BTN_1,BTN_1};
 CodeManager codeManager(defaultCode);
+Lock lock(DOOR_PIN);
 
 OneButtonTiny* resetBtn;
 
 // TODO: debug class?
 void printCurrentCode();
 
-// TODO: class Lock?
+// TODO: some orchestrator class?
 void* doorLockingTask;
-int isDoorUnlocked();
-void unlockDoor();
 bool lockDoor(void*);
 void unlockDoorAndScheduleLocking();
 
@@ -285,7 +285,7 @@ void loop() {
 //                        Serial.println("Code check failed.");
                     }
                 }
-            } else if (isDoorUnlocked() && sCallbackData.Command == BTN_HASH) {
+            } else if (lock.isUnlocked() && sCallbackData.Command == BTN_HASH) {
                 listenForNewCode();
                 tripleBlink();
 
@@ -430,13 +430,12 @@ void printCurrentCode()
 void unlockDoorAndScheduleLocking()
 {
     timer.cancel(doorLockingTask);
-    unlockDoor();
+    lock.unlock();
     doorLockingTask = timer.in(DOOR_OPEN_TIME_MS, lockDoor);
 }
 
-int isDoorUnlocked() { return digitalRead(DOOR_PIN); }
 bool lockDoor(void*) {
-    digitalWrite(DOOR_PIN, LOW);
+    lock.lock();
     statusLEDOff(NULL);
     screenSay(F("Zamkniete!"));
 //    Serial.println("Door locked.");
@@ -445,7 +444,7 @@ bool lockDoor(void*) {
 }
 void unlockDoor()
 {
-    digitalWrite(DOOR_PIN, HIGH);
+    lock.unlock();
     statusLEDOn(NULL);
 //    Serial.println("Door unlocked.");
 }
