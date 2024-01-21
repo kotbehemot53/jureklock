@@ -1,5 +1,4 @@
 #include <Arduino.h>
-//#include <EEPROM.h>
 #include <avr/wdt.h>
 
 #define IR_RECEIVE_PIN 2
@@ -12,6 +11,8 @@
 #include "CodeManager.h"
 #include "Lock.h"
 #include "Game.h"
+#include "RemoteInput.h"
+#include "CodeBuffer.h"
 
 #define DOOR_PIN 8
 #define NEG_RESET_PIN 9
@@ -67,11 +68,9 @@
 //      2. migrate to avr DA series?
 //      3. 5V buck converter?
 //      4. after manual game turn-off, pressing asterisk causes permanent status light, instead of a blink - why???
+//      5. game freezing randomly on real hardware - why? and why didn't it freeze at one revision (see tags)?
 
-volatile struct TinyIRReceiverCallbackDataStruct sCallbackData;
 
-unsigned char numberButtons[10] = {BTN_0, BTN_1, BTN_2, BTN_3, BTN_4, BTN_5, BTN_6, BTN_7, BTN_8, BTN_9};
-bool isNumberButton(unsigned char command);
 //inline const char* findButtonName(unsigned char code)
 //{
 //    switch (code) {
@@ -113,31 +112,26 @@ bool isNumberButton(unsigned char command);
 //    return "";
 //}
 
+volatile struct RemoteInputReceivedData remoteInterruptData;
 auto timer = timer_create_default();
 static void factoryReset();
 
 unsigned const char defaultCode[4] = {BTN_1,BTN_1,BTN_1,BTN_1};
 CodeManager codeManager(defaultCode);
 Lock lock(DOOR_PIN);
+uint8_t numberButtons[10] = {BTN_0, BTN_1, BTN_2, BTN_3, BTN_4, BTN_5, BTN_6, BTN_7, BTN_8, BTN_9};
+RemoteInput remoteInput(
+    BTN_ASTR,
+    BTN_HASH,
+    BTN_OK,
+    BTN_UP,
+    numberButtons
+);
+CodeBuffer codeBuffer;
 
+// TODO: what about these:
 OneButtonTiny* resetBtn;
-
-// TODO: debug class?
-void printCurrentCode();
-
-// TODO: some orchestrator class?
-void* doorLockingTask;
-bool lockDoor(void*);
-void unlockDoorAndScheduleLocking();
-
-// TODO: class RemoteInput?
-unsigned char codeBuffer[4] = {defaultCode[0],defaultCode[1],defaultCode[2],defaultCode[3]};
-short codeBufferPtr = -1;
-bool listeningToOpen = false;
-bool listeningToChangeCode = false;
-void stopListeningForCode();
-void listenForCodeToOpen();
-void listenForNewCode();
+uint8_t receivedCommand;
 
 // TODO: class StatusLEDOutput?
 bool statusLEDOn(void*);
@@ -155,6 +149,14 @@ void screenScheduleClear(int timeout);
 bool screenClear(void*);
 void* screenClearingTask;
 U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0);
+
+// TODO: debug class?
+//void printCurrentCode();
+
+// TODO: some orchestrator class?
+void* doorLockingTask;
+bool lockDoor(void*);
+void unlockDoorAndScheduleLocking();
 
 // game
 Game game;
@@ -178,17 +180,12 @@ void setup() {
 
     // save a default code if non has been set yet
     if (
-        !isNumberButton(codeManager.getCode()[0]) ||
-        !isNumberButton(codeManager.getCode()[1]) ||
-        !isNumberButton(codeManager.getCode()[2]) ||
-        !isNumberButton(codeManager.getCode()[3])
+        !remoteInput.isCommandNumeric(codeManager.getCode()[0]) ||
+        !remoteInput.isCommandNumeric(codeManager.getCode()[1]) ||
+        !remoteInput.isCommandNumeric(codeManager.getCode()[2]) ||
+        !remoteInput.isCommandNumeric(codeManager.getCode()[3])
     ) {
-//        Serial.println(codeManager.getCode()[0]);
-//        Serial.println(codeManager.getCode()[1]);
-//        Serial.println(codeManager.getCode()[2]);
-//        Serial.println(codeManager.getCode()[3]);
         codeManager.factoryReset();
-//        Serial.println("Zresetowano!");
     }
 
     u8g2.begin();
@@ -198,6 +195,21 @@ void setup() {
     wdt_enable(WDTO_2S);
 }
 
+void handleReceivedTinyIRData(uint8_t aAddress, uint8_t aCommand, uint8_t aFlags)
+{
+    remoteInterruptData.Command = aCommand;
+    remoteInterruptData.isRepeat = aFlags == IRDATA_FLAGS_IS_REPEAT;
+    remoteInterruptData.parityFailed = aFlags == IRDATA_FLAGS_PARITY_FAILED;
+    remoteInterruptData.justWritten = true;
+
+//    remoteInterruptData.Flags = aFlags;
+
+//    remoteInput.setReceivedCommand(
+//        aCommand,
+//        aFlags == IRDATA_FLAGS_IS_REPEAT,
+//        aFlags == IRDATA_FLAGS_PARITY_FAILED
+//    );
+}
 
 void loop() {
     wdt_reset();
@@ -241,85 +253,73 @@ void loop() {
         game.tick();
     }
 
-    // handle button presses
-    if (sCallbackData.justWritten) {
-        sCallbackData.justWritten = false;
+    // handle input
+    if (remoteInput.hasNewCommand(&remoteInterruptData)) {
+        receivedCommand = remoteInput.getCommand();
 
-        if (sCallbackData.Flags != IRDATA_FLAGS_IS_REPEAT && sCallbackData.Flags != IRDATA_FLAGS_PARITY_FAILED) {
+        // start listening for code
+        if (receivedCommand == remoteInput.commandEnterCodeToOpen) {
+            gameInProgress = false;
 
-            // TODO: debug method?
-//            Serial.print(F("Address=0x"));
-//            Serial.print(sCallbackData.Address, HEX);
-//            Serial.print(F(" Command=0x"));
-//            Serial.print(sCallbackData.Command, HEX);
-//            Serial.print(F(" Btn="));
-//            Serial.print(findButtonName(sCallbackData.Command));
+            codeBuffer.listenForCodeToOpen();
+            shortBlink();
 
-//            Serial.println();
+            screenSay(F("Dawaj kod!"));
+        } else if (codeBuffer.isListeningForCodeToOpen() && remoteInput.isCommandNumeric(receivedCommand)) {
+            screenDrawStar(codeBuffer.getNumberOfDigitsReceived());
 
-            if (sCallbackData.Command == BTN_ASTR) {
-                gameInProgress = false;
+            codeBuffer.addDigit(receivedCommand);
 
-                listenForCodeToOpen();
-                shortBlink();
+            // full code received
+            if (!codeBuffer.isListeningForCodeToOpen()) {
+                if (codeManager.checkCode(codeBuffer.getCode())) {
+                    unlockDoorAndScheduleLocking();
 
-                screenSay(F("Dawaj kod!"));
-
-                // TODO: introduce keyboard class?
-            } else if (listeningToOpen && codeBufferPtr < 4 && isNumberButton(sCallbackData.Command)) {
-                screenDrawStar(codeBufferPtr);
-
-                codeBuffer[codeBufferPtr++] = sCallbackData.Command;
-
-                if (codeBufferPtr >= 4) {
-                    stopListeningForCode();
-
-                    if(codeManager.checkCode(codeBuffer)) {
-                        unlockDoorAndScheduleLocking();
-
-                        screenSay(F("Otwarte!"));
-                    } else {
-                        doubleBlink();
-
-                        screenSay(F("Lipa, panie!"));
+                    screenSay(F("Otwarte!"));
+                } else {
+                    doubleBlink();
+                    screenSay(F("Lipa, panie!"));
 //                        Serial.println("Code check failed.");
-                    }
                 }
-            } else if (lock.isUnlocked() && sCallbackData.Command == BTN_HASH) {
-                listenForNewCode();
-                tripleBlink();
+            }
+        } else if (receivedCommand == remoteInput.commandEnterCodeToChange && lock.isUnlocked()) {
+//            Serial.println("Getting new code");
 
-                screenSay(F("Nowy kod?"));
-            } else if (listeningToChangeCode && codeBufferPtr < 4 && isNumberButton(sCallbackData.Command)) {
-                screenDrawStar(codeBufferPtr);
+            codeBuffer.listenForCodeToChange();
+            tripleBlink();
 
-                codeBuffer[codeBufferPtr++] = sCallbackData.Command;
-                if (codeBufferPtr >= 4) {
-                    stopListeningForCode();
+            screenSay(F("Nowy kod?"));
+        } else if (codeBuffer.isListeningForCodeToChange() && remoteInput.isCommandNumeric(receivedCommand)) {
+            screenDrawStar(codeBuffer.getNumberOfDigitsReceived());
 
-                    codeManager.saveCode(codeBuffer);
+            codeBuffer.addDigit(receivedCommand);
 
-                    screenSay(F("Ustawiony!"));
+            // full code received
+            if (!codeBuffer.isListeningForCodeToChange()) {
+                codeManager.saveCode(codeBuffer.getCode());
+
+                screenSay(F("Ustawiony!"));
 //                    Serial.println("Code set.");
 //                    printCurrentCode();
-                    longBlink();
-                }
-            } else if (sCallbackData.Command == BTN_OK) {
-                if (gameInProgress) {
-                    gameInProgress = false;
-                    screenScheduleClear(1);
-                } else {
-                    listeningToChangeCode = false;
-                    listeningToOpen = false;
+                longBlink();
+            }
+        } else if (receivedCommand == remoteInput.commandStartGame) {
+            if (gameInProgress) {
+                // TODO: move gameInProgress to game?
+                gameInProgress = false;
+                screenScheduleClear(1);
+            } else {
+                codeBuffer.stopListeningForCode();
 
-                    game.initGame();
-                    gameInProgress = true;
-                    screenScheduleClear(DOOR_OPEN_TIME_MS);
-                }
-            } else if (gameInProgress && sCallbackData.Command == BTN_UP) {
-                game.jump();
+                game.initGame();
+                gameInProgress = true;
+
+                //TODO:  separate const for that?
                 screenScheduleClear(DOOR_OPEN_TIME_MS);
             }
+        } else if (gameInProgress && receivedCommand == remoteInput.commandJump) {
+            game.jump();
+            screenScheduleClear(DOOR_OPEN_TIME_MS);
         }
     }
 }
@@ -371,66 +371,21 @@ bool screenClear(void*)
     return false;
 }
 
-//char* findButtonName(unsigned char code)
-
-void listenForNewCode()
-{
-    codeBufferPtr = 0;
-    listeningToOpen = false;
-    listeningToChangeCode = true;
-//    Serial.println("Listening for new code");
-}
-
-void listenForCodeToOpen()
-{
-    codeBufferPtr = 0;
-    listeningToOpen = true;
-    listeningToChangeCode = false;
-//    Serial.println("Listening for code to open");
-}
-
-void stopListeningForCode()
-{
-    codeBufferPtr = -1;
-    listeningToOpen = false;
-    listeningToChangeCode = false;
-}
-
-bool isNumberButton(unsigned char command)
-{
-    for (unsigned char numberButton : numberButtons) {
-        if (numberButton == command) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-
-
-
-void handleReceivedTinyIRData(uint8_t aAddress, uint8_t aCommand, uint8_t aFlags)
-{
-    sCallbackData.Command = aCommand;
-    sCallbackData.Flags = aFlags;
-    sCallbackData.justWritten = true;
-}
-
-void printCurrentCode()
-{
-//    Serial.print("Current code: ");
-//    Serial.print(findButtonName(codeManager.getCode()[0]));
-//    Serial.print(findButtonName(codeManager.getCode()[1]));
-//    Serial.print(findButtonName(codeManager.getCode()[2]));
-//    Serial.print(findButtonName(codeManager.getCode()[3]));
-//    Serial.println();
-}
+//void printCurrentCode()
+//{
+////    Serial.print("Current code: ");
+////    Serial.print(findButtonName(codeManager.getCode()[0]));
+////    Serial.print(findButtonName(codeManager.getCode()[1]));
+////    Serial.print(findButtonName(codeManager.getCode()[2]));
+////    Serial.print(findButtonName(codeManager.getCode()[3]));
+////    Serial.println();
+//}
 
 void unlockDoorAndScheduleLocking()
 {
     timer.cancel(doorLockingTask);
     lock.unlock();
+    statusLEDOn(NULL);
     doorLockingTask = timer.in(DOOR_OPEN_TIME_MS, lockDoor);
 }
 
@@ -441,12 +396,6 @@ bool lockDoor(void*) {
 //    Serial.println("Door locked.");
 
     return false;
-}
-void unlockDoor()
-{
-    lock.unlock();
-    statusLEDOn(NULL);
-//    Serial.println("Door unlocked.");
 }
 
 bool statusLEDOn(void*)

@@ -2,3 +2,4 @@
 version = 1
 firmware = '../.pio/build/wokwi/firmware.hex'
 elf = '../.pio/build/wokwi/firmware.elf'
+gdbServerPort=3333
