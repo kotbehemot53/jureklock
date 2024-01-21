@@ -123,12 +123,6 @@ OneButtonTiny* resetBtn;
 // TODO: debug class?
 void printCurrentCode();
 
-// TODO: all these to Input??
-unsigned char codeBuffer[4] = {defaultCode[0],defaultCode[1],defaultCode[2],defaultCode[3]};
-short codeBufferPtr = -1;
-bool listeningToOpen = false;
-bool listeningToChangeCode = false;
-
 // TODO: class Lock?
 void* doorLockingTask;
 int isDoorUnlocked();
@@ -136,8 +130,11 @@ void unlockDoor();
 bool lockDoor(void*);
 void unlockDoorAndScheduleLocking();
 
-
 // TODO: class RemoteInput?
+unsigned char codeBuffer[4] = {defaultCode[0],defaultCode[1],defaultCode[2],defaultCode[3]};
+short codeBufferPtr = -1;
+bool listeningToOpen = false;
+bool listeningToChangeCode = false;
 void stopListeningForCode();
 void listenForCodeToOpen();
 void listenForNewCode();
@@ -301,7 +298,6 @@ void loop() {
                     stopListeningForCode();
 
                     codeManager.saveCode(codeBuffer);
-                    codeBufferPtr = -1;
 
                     screenSay(F("Ustawiony!"));
 //                    Serial.println("Code set.");
