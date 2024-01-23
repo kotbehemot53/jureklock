@@ -5,8 +5,8 @@
 
 #include <TinyIRReceiver.hpp>
 #include <OneButtonTiny.h>
-#include <arduino-timer.h>
 #include <U8g2lib.h>
+#include <TaskScheduler.h>
 
 #include "CodeManager.h"
 #include "Lock.h"
@@ -113,8 +113,8 @@
 //}
 
 volatile struct RemoteInputReceivedData remoteInterruptData;
-auto timer = timer_create_default();
 static void factoryReset();
+Scheduler ts;
 
 unsigned const char defaultCode[4] = {BTN_1,BTN_1,BTN_1,BTN_1};
 CodeManager codeManager(defaultCode);
@@ -214,7 +214,8 @@ void handleReceivedTinyIRData(uint8_t aAddress, uint8_t aCommand, uint8_t aFlags
 void loop() {
     wdt_reset();
 
-    timer.tick();
+//    timer.tick();
+    ts.execute();
     resetBtn->tick();
 
     // draw game
