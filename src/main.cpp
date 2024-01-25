@@ -134,29 +134,31 @@ OneButtonTiny* resetBtn;
 uint8_t receivedCommand;
 
 // TODO: class StatusLEDOutput?
-bool statusLEDOn(void*);
-bool statusLEDOff(void*);
+void statusLEDOn();
+void statusLEDOff();
 void shortBlink();
 void longBlink();
 void doubleBlink();
 void tripleBlink();
+void blinkCallback();
+Task LEDBlinkingTask(0, 0, &blinkCallback, &ts, false);
 
 // TODO: class screen?
 void screenSay(const __FlashStringHelper *, byte height = 26);
 void screenSay2Lines(const char *, const char *);
 void screenDrawStar(byte);
+void screenClear();
 void screenScheduleClear(int timeout);
-bool screenClear(void*);
-void* screenClearingTask;
+Task screenClearingTask(0, 1, &screenClear, &ts, false);
 U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0);
 
 // TODO: debug class?
 //void printCurrentCode();
 
 // TODO: some orchestrator class?
-void* doorLockingTask;
-bool lockDoor(void*);
+void lockDoor();
 void unlockDoorAndScheduleLocking();
+Task doorLockingTask(0, 1, &lockDoor, &ts, false);
 
 // game
 Game game;
@@ -360,16 +362,13 @@ void screenSay2Lines(const char* text, const char* text2)
 
 void screenScheduleClear(int timeout)
 {
-    timer.cancel(screenClearingTask);
-    screenClearingTask = timer.in(timeout, screenClear);
+    screenClearingTask.restartDelayed(timeout);
 }
 
-bool screenClear(void*)
+void screenClear()
 {
     u8g2.clearDisplay();
     gameInProgress = false;
-
-    return false;
 }
 
 //void printCurrentCode()
@@ -384,63 +383,70 @@ bool screenClear(void*)
 
 void unlockDoorAndScheduleLocking()
 {
-    timer.cancel(doorLockingTask);
     lock.unlock();
-    statusLEDOn(NULL);
-    doorLockingTask = timer.in(DOOR_OPEN_TIME_MS, lockDoor);
+    statusLEDOn();
+    doorLockingTask.restartDelayed(DOOR_OPEN_TIME_MS);
 }
 
-bool lockDoor(void*) {
+void lockDoor() {
     lock.lock();
-    statusLEDOff(NULL);
+    statusLEDOff();
     screenSay(F("Zamkniete!"));
-//    Serial.println("Door locked.");
-
-    return false;
 }
 
-bool statusLEDOn(void*)
+void statusLEDOn()
 {
     digitalWrite(STATUS_LED_PIN, HIGH);
-
-    return false;
 }
 
-bool statusLEDOff(void*)
+void statusLEDOff()
 {
     digitalWrite(STATUS_LED_PIN, LOW);
+}
 
-    return false;
+void blinkCallback()
+{
+    if (LEDBlinkingTask.getRunCounter() & 1) {
+        statusLEDOn();
+    } else {
+        statusLEDOff();
+    }
+
+    if (LEDBlinkingTask.isLastIteration()) {
+        statusLEDOff();
+    }
 }
 
 void shortBlink()
 {
-    statusLEDOn(NULL);
-    timer.in(50, statusLEDOff);
+    LEDBlinkingTask.disable();
+    LEDBlinkingTask.setInterval(50);
+    LEDBlinkingTask.setIterations(2);
+    LEDBlinkingTask.enable();
 }
 
 void longBlink()
 {
-    statusLEDOn(NULL);
-    timer.in(1000, statusLEDOff);
+    LEDBlinkingTask.disable();
+    LEDBlinkingTask.setInterval(1000);
+    LEDBlinkingTask.setIterations(2);
+    LEDBlinkingTask.enable();
 }
 
 void doubleBlink()
 {
-    statusLEDOn(NULL);
-    timer.in(100, statusLEDOff);
-    timer.in(200, statusLEDOn);
-    timer.in(300, statusLEDOff);
+    LEDBlinkingTask.disable();
+    LEDBlinkingTask.setInterval(100);
+    LEDBlinkingTask.setIterations(4);
+    LEDBlinkingTask.enable();
 }
 
 void tripleBlink()
 {
-    statusLEDOn(NULL);
-    timer.in(100, statusLEDOff);
-    timer.in(200, statusLEDOn);
-    timer.in(300, statusLEDOff);
-    timer.in(400, statusLEDOn);
-    timer.in(500, statusLEDOff);
+    LEDBlinkingTask.disable();
+    LEDBlinkingTask.setInterval(100);
+    LEDBlinkingTask.setIterations(6);
+    LEDBlinkingTask.enable();
 }
 
 void factoryReset()
