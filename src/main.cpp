@@ -6,6 +6,8 @@
 #include <TinyIRReceiver.hpp>
 #include <OneButtonTiny.h>
 #include <U8g2lib.h>
+
+#define _TASK_OO_CALLBACKS
 #include <TaskScheduler.h>
 
 #include "CodeManager.h"
@@ -13,6 +15,7 @@
 #include "Game.h"
 #include "RemoteInput.h"
 #include "CodeBuffer.h"
+#include "StatusLEDOutput.h"
 
 #define DOOR_PIN 8
 #define NEG_RESET_PIN 9
@@ -118,7 +121,7 @@ Scheduler ts;
 
 unsigned const char defaultCode[4] = {BTN_1,BTN_1,BTN_1,BTN_1};
 CodeManager codeManager(defaultCode);
-Lock lock(DOOR_PIN);
+Lock lock(DOOR_PIN, &ts, DOOR_OPEN_TIME_MS);
 uint8_t numberButtons[10] = {BTN_0, BTN_1, BTN_2, BTN_3, BTN_4, BTN_5, BTN_6, BTN_7, BTN_8, BTN_9};
 RemoteInput remoteInput(
     BTN_ASTR,
@@ -134,31 +137,32 @@ OneButtonTiny* resetBtn;
 uint8_t receivedCommand;
 
 // TODO: class StatusLEDOutput?
-void statusLEDOn();
-void statusLEDOff();
-void shortBlink();
-void longBlink();
-void doubleBlink();
-void tripleBlink();
-void blinkCallback();
-Task LEDBlinkingTask(0, 0, &blinkCallback, &ts, false);
+//void statusLEDOn();
+//void statusLEDOff();
+//void shortBlink();
+//void longBlink();
+//void doubleBlink();
+//void tripleBlink();
+//void blinkCallback();
+//Task LEDBlinkingTask(0, 0, &blinkCallback, &ts, false);
+StatusLEDOutput statusLedOutput(STATUS_LED_PIN, &ts);
 
 // TODO: class screen?
 void screenSay(const __FlashStringHelper *, byte height = 26);
 void screenSay2Lines(const char *, const char *);
 void screenDrawStar(byte);
 void screenClear();
-void screenScheduleClear(int timeout);
-Task screenClearingTask(0, 1, &screenClear, &ts, false);
+//void screenScheduleClear(int timeout);
+//Task screenClearingTask(0, 1, &screenClear, &ts, false);
 U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0);
 
 // TODO: debug class?
 //void printCurrentCode();
 
 // TODO: some orchestrator class?
-void lockDoor();
-void unlockDoorAndScheduleLocking();
-Task doorLockingTask(0, 1, &lockDoor, &ts, false);
+//void lockDoor();
+//void unlockDoorAndScheduleLocking();
+//Task doorLockingTask(0, 1, &lockDoor, &ts, false);
 
 // game
 Game game;
@@ -191,6 +195,9 @@ void setup() {
     }
 
     u8g2.begin();
+
+//    StatusLEDOutput::setup(&ts, STATUS_LED_PIN);
+
 
     randomSeed(analogRead(0));
 
@@ -265,7 +272,7 @@ void loop() {
             gameInProgress = false;
 
             codeBuffer.listenForCodeToOpen();
-            shortBlink();
+            statusLedOutput.shortBlink();
 
             screenSay(F("Dawaj kod!"));
         } else if (codeBuffer.isListeningForCodeToOpen() && remoteInput.isCommandNumeric(receivedCommand)) {
@@ -276,11 +283,11 @@ void loop() {
             // full code received
             if (!codeBuffer.isListeningForCodeToOpen()) {
                 if (codeManager.checkCode(codeBuffer.getCode())) {
-                    unlockDoorAndScheduleLocking();
+                    lock.unlockDoorAndScheduleLocking();
 
                     screenSay(F("Otwarte!"));
                 } else {
-                    doubleBlink();
+                    statusLedOutput.doubleBlink();
                     screenSay(F("Lipa, panie!"));
 //                        Serial.println("Code check failed.");
                 }
@@ -289,7 +296,7 @@ void loop() {
 //            Serial.println("Getting new code");
 
             codeBuffer.listenForCodeToChange();
-            tripleBlink();
+            statusLedOutput.tripleBlink();
 
             screenSay(F("Nowy kod?"));
         } else if (codeBuffer.isListeningForCodeToChange() && remoteInput.isCommandNumeric(receivedCommand)) {
@@ -304,13 +311,13 @@ void loop() {
                 screenSay(F("Ustawiony!"));
 //                    Serial.println("Code set.");
 //                    printCurrentCode();
-                longBlink();
+                statusLedOutput.longBlink();
             }
         } else if (receivedCommand == remoteInput.commandStartGame) {
             if (gameInProgress) {
                 // TODO: move gameInProgress to game?
                 gameInProgress = false;
-                screenScheduleClear(1);
+//                screenScheduleClear(1);
             } else {
                 codeBuffer.stopListeningForCode();
 
@@ -318,11 +325,11 @@ void loop() {
                 gameInProgress = true;
 
                 //TODO:  separate const for that?
-                screenScheduleClear(DOOR_OPEN_TIME_MS);
+//                screenScheduleClear(DOOR_OPEN_TIME_MS);
             }
         } else if (gameInProgress && receivedCommand == remoteInput.commandJump) {
             game.jump();
-            screenScheduleClear(DOOR_OPEN_TIME_MS);
+//            screenScheduleClear(DOOR_OPEN_TIME_MS);
         }
     }
 }
@@ -335,7 +342,7 @@ void screenDrawStar(byte starNo)
     u8g2.drawStr(20,38,stars[starNo]);
     u8g2.sendBuffer();
 
-    screenScheduleClear(DOOR_OPEN_TIME_MS);
+//    screenScheduleClear(DOOR_OPEN_TIME_MS);
 }
 
 void screenSay(const __FlashStringHelper* text, byte height)
@@ -346,7 +353,7 @@ void screenSay(const __FlashStringHelper* text, byte height)
     u8g2.print(text);
     u8g2.sendBuffer();
 
-    screenScheduleClear(DOOR_OPEN_TIME_MS);
+//    screenScheduleClear(DOOR_OPEN_TIME_MS);
 }
 
 void screenSay2Lines(const char* text, const char* text2)
@@ -357,13 +364,13 @@ void screenSay2Lines(const char* text, const char* text2)
     u8g2.drawStr(0,31,text2);
     u8g2.sendBuffer();
 
-    screenScheduleClear(DOOR_OPEN_TIME_MS);
+//    screenScheduleClear(DOOR_OPEN_TIME_MS);
 }
 
-void screenScheduleClear(int timeout)
-{
-    screenClearingTask.restartDelayed(timeout);
-}
+//void screenScheduleClear(int timeout)
+//{
+//    screenClearingTask.restartDelayed(timeout);
+//}
 
 void screenClear()
 {
@@ -381,73 +388,73 @@ void screenClear()
 ////    Serial.println();
 //}
 
-void unlockDoorAndScheduleLocking()
-{
-    lock.unlock();
-    statusLEDOn();
-    doorLockingTask.restartDelayed(DOOR_OPEN_TIME_MS);
-}
+//void unlockDoorAndScheduleLocking()
+//{
+//    lock.unlock();
+//    statusLedOutput.statusLEDOn();
+//    doorLockingTask.restartDelayed(DOOR_OPEN_TIME_MS);
+//}
+//
+//void lockDoor() {
+//    lock.lock();
+//    statusLedOutput.statusLEDOff();
+//    screenSay(F("Zamkniete!"));
+//}
 
-void lockDoor() {
-    lock.lock();
-    statusLEDOff();
-    screenSay(F("Zamkniete!"));
-}
-
-void statusLEDOn()
-{
-    digitalWrite(STATUS_LED_PIN, HIGH);
-}
-
-void statusLEDOff()
-{
-    digitalWrite(STATUS_LED_PIN, LOW);
-}
-
-void blinkCallback()
-{
-    if (LEDBlinkingTask.getRunCounter() & 1) {
-        statusLEDOn();
-    } else {
-        statusLEDOff();
-    }
-
-    if (LEDBlinkingTask.isLastIteration()) {
-        statusLEDOff();
-    }
-}
-
-void shortBlink()
-{
-    LEDBlinkingTask.disable();
-    LEDBlinkingTask.setInterval(50);
-    LEDBlinkingTask.setIterations(2);
-    LEDBlinkingTask.enable();
-}
-
-void longBlink()
-{
-    LEDBlinkingTask.disable();
-    LEDBlinkingTask.setInterval(1000);
-    LEDBlinkingTask.setIterations(2);
-    LEDBlinkingTask.enable();
-}
-
-void doubleBlink()
-{
-    LEDBlinkingTask.disable();
-    LEDBlinkingTask.setInterval(100);
-    LEDBlinkingTask.setIterations(4);
-    LEDBlinkingTask.enable();
-}
-
-void tripleBlink()
-{
-    LEDBlinkingTask.disable();
-    LEDBlinkingTask.setInterval(100);
-    LEDBlinkingTask.setIterations(6);
-    LEDBlinkingTask.enable();
-}
+//void statusLEDOn()
+//{
+//    digitalWrite(STATUS_LED_PIN, HIGH);
+//}
+//
+//void statusLEDOff()
+//{
+//    digitalWrite(STATUS_LED_PIN, LOW);
+//}
+//
+//void blinkCallback()
+//{
+//    if (LEDBlinkingTask.getRunCounter() & 1) {
+//        statusLEDOn();
+//    } else {
+//        statusLEDOff();
+//    }
+//
+//    if (LEDBlinkingTask.isLastIteration()) {
+//        statusLEDOff();
+//    }
+//}
+//
+//void shortBlink()
+//{
+//    LEDBlinkingTask.disable();
+//    LEDBlinkingTask.setInterval(50);
+//    LEDBlinkingTask.setIterations(2);
+//    LEDBlinkingTask.enable();
+//}
+//
+//void longBlink()
+//{
+//    LEDBlinkingTask.disable();
+//    LEDBlinkingTask.setInterval(1000);
+//    LEDBlinkingTask.setIterations(2);
+//    LEDBlinkingTask.enable();
+//}
+//
+//void doubleBlink()
+//{
+//    LEDBlinkingTask.disable();
+//    LEDBlinkingTask.setInterval(100);
+//    LEDBlinkingTask.setIterations(4);
+//    LEDBlinkingTask.enable();
+//}
+//
+//void tripleBlink()
+//{
+//    LEDBlinkingTask.disable();
+//    LEDBlinkingTask.setInterval(100);
+//    LEDBlinkingTask.setIterations(6);
+//    LEDBlinkingTask.enable();
+//}
 
 void factoryReset()
 {

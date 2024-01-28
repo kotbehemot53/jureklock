@@ -7,19 +7,26 @@
 
 #include <Arduino.h>
 
-class Lock
+#define _TASK_OO_CALLBACKS      // Support for dynamic callback method binding
+#include <TaskSchedulerDeclarations.h>
+
+class Lock : public Task
 {
 private:
     Lock();
 
     byte doorPin;
+    int doorOpenTime;
 
 public:
-    Lock(byte doorPin);
+    Lock(byte doorPin, Scheduler* ts, int aDoorOpenTime);
 
     inline void unlock() { digitalWrite(this->doorPin, HIGH); }
     inline void lock() { digitalWrite(this->doorPin, LOW); }
     inline bool isUnlocked() { return digitalRead(this->doorPin); }
+
+    void unlockDoorAndScheduleLocking();
+    bool Callback();
 };
 
 #endif //JUREKLOCK1_LOCK_H
