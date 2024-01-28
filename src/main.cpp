@@ -12,6 +12,7 @@
 
 #include "CodeManager.h"
 #include "Lock.h"
+#include "LockScheduler.h"
 #include "Game.h"
 #include "RemoteInput.h"
 #include "CodeBuffer.h"
@@ -121,7 +122,7 @@ Scheduler ts;
 
 unsigned const char defaultCode[4] = {BTN_1,BTN_1,BTN_1,BTN_1};
 CodeManager codeManager(defaultCode);
-Lock lock(DOOR_PIN, &ts, DOOR_OPEN_TIME_MS);
+Lock lock(DOOR_PIN);
 uint8_t numberButtons[10] = {BTN_0, BTN_1, BTN_2, BTN_3, BTN_4, BTN_5, BTN_6, BTN_7, BTN_8, BTN_9};
 RemoteInput remoteInput(
     BTN_ASTR,
@@ -131,21 +132,11 @@ RemoteInput remoteInput(
     numberButtons
 );
 CodeBuffer codeBuffer;
+StatusLEDOutput statusLedOutput(STATUS_LED_PIN, &ts);
 
 // TODO: what about these:
 OneButtonTiny* resetBtn;
 uint8_t receivedCommand;
-
-// TODO: class StatusLEDOutput?
-//void statusLEDOn();
-//void statusLEDOff();
-//void shortBlink();
-//void longBlink();
-//void doubleBlink();
-//void tripleBlink();
-//void blinkCallback();
-//Task LEDBlinkingTask(0, 0, &blinkCallback, &ts, false);
-StatusLEDOutput statusLedOutput(STATUS_LED_PIN, &ts);
 
 // TODO: class screen?
 void screenSay(const __FlashStringHelper *, byte height = 26);
@@ -159,10 +150,7 @@ U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0);
 // TODO: debug class?
 //void printCurrentCode();
 
-// TODO: some orchestrator class?
-//void lockDoor();
-//void unlockDoorAndScheduleLocking();
-//Task doorLockingTask(0, 1, &lockDoor, &ts, false);
+LockScheduler lockScheduler(&ts, &lock, &statusLedOutput, DOOR_OPEN_TIME_MS);
 
 // game
 Game game;
@@ -196,9 +184,6 @@ void setup() {
 
     u8g2.begin();
 
-//    StatusLEDOutput::setup(&ts, STATUS_LED_PIN);
-
-
     randomSeed(analogRead(0));
 
     wdt_enable(WDTO_2S);
@@ -210,14 +195,6 @@ void handleReceivedTinyIRData(uint8_t aAddress, uint8_t aCommand, uint8_t aFlags
     remoteInterruptData.isRepeat = aFlags == IRDATA_FLAGS_IS_REPEAT;
     remoteInterruptData.parityFailed = aFlags == IRDATA_FLAGS_PARITY_FAILED;
     remoteInterruptData.justWritten = true;
-
-//    remoteInterruptData.Flags = aFlags;
-
-//    remoteInput.setReceivedCommand(
-//        aCommand,
-//        aFlags == IRDATA_FLAGS_IS_REPEAT,
-//        aFlags == IRDATA_FLAGS_PARITY_FAILED
-//    );
 }
 
 void loop() {
@@ -283,18 +260,15 @@ void loop() {
             // full code received
             if (!codeBuffer.isListeningForCodeToOpen()) {
                 if (codeManager.checkCode(codeBuffer.getCode())) {
-                    lock.unlockDoorAndScheduleLocking();
+                    lockScheduler.unlockDoorAndScheduleLocking();
 
                     screenSay(F("Otwarte!"));
                 } else {
                     statusLedOutput.doubleBlink();
                     screenSay(F("Lipa, panie!"));
-//                        Serial.println("Code check failed.");
                 }
             }
         } else if (receivedCommand == remoteInput.commandEnterCodeToChange && lock.isUnlocked()) {
-//            Serial.println("Getting new code");
-
             codeBuffer.listenForCodeToChange();
             statusLedOutput.tripleBlink();
 
@@ -309,7 +283,6 @@ void loop() {
                 codeManager.saveCode(codeBuffer.getCode());
 
                 screenSay(F("Ustawiony!"));
-//                    Serial.println("Code set.");
 //                    printCurrentCode();
                 statusLedOutput.longBlink();
             }
@@ -386,74 +359,6 @@ void screenClear()
 ////    Serial.print(findButtonName(codeManager.getCode()[2]));
 ////    Serial.print(findButtonName(codeManager.getCode()[3]));
 ////    Serial.println();
-//}
-
-//void unlockDoorAndScheduleLocking()
-//{
-//    lock.unlock();
-//    statusLedOutput.statusLEDOn();
-//    doorLockingTask.restartDelayed(DOOR_OPEN_TIME_MS);
-//}
-//
-//void lockDoor() {
-//    lock.lock();
-//    statusLedOutput.statusLEDOff();
-//    screenSay(F("Zamkniete!"));
-//}
-
-//void statusLEDOn()
-//{
-//    digitalWrite(STATUS_LED_PIN, HIGH);
-//}
-//
-//void statusLEDOff()
-//{
-//    digitalWrite(STATUS_LED_PIN, LOW);
-//}
-//
-//void blinkCallback()
-//{
-//    if (LEDBlinkingTask.getRunCounter() & 1) {
-//        statusLEDOn();
-//    } else {
-//        statusLEDOff();
-//    }
-//
-//    if (LEDBlinkingTask.isLastIteration()) {
-//        statusLEDOff();
-//    }
-//}
-//
-//void shortBlink()
-//{
-//    LEDBlinkingTask.disable();
-//    LEDBlinkingTask.setInterval(50);
-//    LEDBlinkingTask.setIterations(2);
-//    LEDBlinkingTask.enable();
-//}
-//
-//void longBlink()
-//{
-//    LEDBlinkingTask.disable();
-//    LEDBlinkingTask.setInterval(1000);
-//    LEDBlinkingTask.setIterations(2);
-//    LEDBlinkingTask.enable();
-//}
-//
-//void doubleBlink()
-//{
-//    LEDBlinkingTask.disable();
-//    LEDBlinkingTask.setInterval(100);
-//    LEDBlinkingTask.setIterations(4);
-//    LEDBlinkingTask.enable();
-//}
-//
-//void tripleBlink()
-//{
-//    LEDBlinkingTask.disable();
-//    LEDBlinkingTask.setInterval(100);
-//    LEDBlinkingTask.setIterations(6);
-//    LEDBlinkingTask.enable();
 //}
 
 void factoryReset()
