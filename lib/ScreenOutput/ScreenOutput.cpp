@@ -57,12 +57,9 @@ void ScreenOutput::scheduleClear(int timeout)
     this->restartDelayed(timeout);
 }
 
-// TODO: drawGameOver?
 // TODO: game drawing in a separate class?
 
-
-
-void ScreenOutput::drawGame(char *gameScoreStr)
+void ScreenOutput::drawGame()
 {
     // calculate score string
     sprintf(gameScoreStr, "Wynik: %d", game->getScore());
@@ -87,6 +84,11 @@ void ScreenOutput::drawGame(char *gameScoreStr)
     // draw ground
     u8g2->drawLine(0, 31, 127, 31);
     u8g2->sendBuffer();
+}
+
+void ScreenOutput::drawGameOver()
+{
+    this->say2Lines("Koniec!", gameScoreStr);
 }
 
 bool ScreenOutput::Callback()

@@ -17,6 +17,7 @@ class ScreenOutput : public Task
 private:
     Game* game;
     U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C* u8g2;
+    char gameScoreStr[100] = "Wynik: 0";
 
 public:
     ScreenOutput(Scheduler* ts, Game* aGame, U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C* aU8g2);
@@ -26,7 +27,9 @@ public:
     void drawStar(byte);
     void clearScreen();
     void scheduleClear(int timeout);
-    void drawGame(char *gameScoreStr);
+
+    void drawGame();
+    void drawGameOver();
 
     bool Callback();
 };

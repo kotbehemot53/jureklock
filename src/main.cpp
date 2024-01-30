@@ -72,7 +72,7 @@
 //      1. refactor (OOP)
 //      2. migrate to avr DA series?
 //      3. 5V buck converter?
-//      5. game freezing randomly on real hardware - why? and why didn't it freeze at one revision (see tags)?
+//      4. game freezing randomly on real hardware - why? and why didn't it freeze at one revision (see tags)?
 
 //inline const char* findButtonName(unsigned char code)
 //{
@@ -142,7 +142,6 @@ Game game;
 
 // TODO: game orchestration? and drawing?
 bool gameInProgress = false;
-char gameScoreStr[100] = "Wynik: 0";
 
 U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0);
 // TODO: construct u8g2 inside screenOutput? or game drawing class?
@@ -205,16 +204,11 @@ void loop() {
     // TODO: move it all to some game orchestrator?
     // draw game
     if (gameInProgress) {
-        // calculate score string
-        sprintf(gameScoreStr, "Wynik: %d", game.getScore());
-
         if (game.isGameOver()) {
-            // draw game over screen
-            screenOutput.say2Lines("Koniec!", gameScoreStr);
-
+            screenOutput.drawGameOver();
             gameInProgress = false;
         } else {
-            screenOutput.drawGame(gameScoreStr);
+            screenOutput.drawGame();
         }
 
         game.tick();
