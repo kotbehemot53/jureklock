@@ -15,11 +15,11 @@ private:
     byte doorPin;
 
 public:
-    Lock(byte doorPin);
+    explicit Lock(byte doorPin);
 
-    inline void unlock() { digitalWrite(this->doorPin, HIGH); }
-    inline void lock() { digitalWrite(this->doorPin, LOW); }
-    inline bool isUnlocked() { return digitalRead(this->doorPin); }
+    inline void unlock() const { digitalWrite(this->doorPin, HIGH); }
+    inline void lock() const { digitalWrite(this->doorPin, LOW); }
+    inline bool isUnlocked() const { return digitalRead(this->doorPin); }
 
 };
 

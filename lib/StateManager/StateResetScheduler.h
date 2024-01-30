@@ -8,7 +8,7 @@
 #include "ScreenOutput.h"
 #include "StateManager.h"
 
-class StateResetScheduler : public Task
+class StateResetScheduler : private Task
 {
 private:
     StateManager* stateManager;
@@ -16,12 +16,12 @@ private:
 
     StateResetScheduler();
 
+    bool Callback();
+
 public:
     StateResetScheduler(Scheduler* ts, StateManager *aStateManager, ScreenOutput *aScreenOutput);
 
     void scheduleReset(int timeout);
-
-    bool Callback();
 };
 
 

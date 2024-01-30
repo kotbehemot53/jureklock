@@ -23,4 +23,6 @@ bool StateResetScheduler::Callback()
 {
     this->stateManager->reset();
     this->screenOutput->clearScreen();
+
+    return false;
 }

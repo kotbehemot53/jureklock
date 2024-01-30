@@ -11,7 +11,7 @@
 #include "Lock.h"
 #include "StatusLEDOutput.h"
 
-class LockScheduler : public Task
+class LockScheduler : private Task
 {
 private:
     int doorOpenTime;
@@ -20,11 +20,12 @@ private:
 
     LockScheduler();
 
+    bool Callback();
+
 public:
     LockScheduler(Scheduler* ts, Lock* aLock, StatusLEDOutput* aStatusLedOutput, int aDoorOpenTime);
 
     void unlockDoorAndScheduleLocking();
-    bool Callback();
 };
 
 

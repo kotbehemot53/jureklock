@@ -10,25 +10,25 @@
 #define _TASK_OO_CALLBACKS      // Support for dynamic callback method binding
 #include <TaskSchedulerDeclarations.h>
 
-class StatusLEDOutput : public Task
+class StatusLEDOutput : private Task
 {
 private:
     uint8_t ledPin;
 
     StatusLEDOutput();
 
+    bool Callback();
+
 public :
     StatusLEDOutput(uint8_t ledPin, Scheduler* ts);
 
-    void statusLEDOn();
-    void statusLEDOff();
+    void statusLEDOn() const;
+    void statusLEDOff() const;
 
     void shortBlink();
     void longBlink();
     void doubleBlink();
     void tripleBlink();
-
-    bool Callback();
 };
 
 #endif //JUREKLOCK1_STATUSLEDOUTPUT_H

@@ -74,7 +74,7 @@
 //      1. migrate to avr DA series?
 //      2. 5V buck converter?
 //      3. game freezing randomly on real hardware - why? and why didn't it freeze at one revision (see tags)?
-//      4. u8g2 inside screenoutput? private inheritance of Task?
+//      4. u8g2 inside ScreenOutput?
 
 // generic variables and functions
 const uint8_t numberButtons[10] = {BTN_0, BTN_1, BTN_2, BTN_3, BTN_4, BTN_5, BTN_6, BTN_7, BTN_8, BTN_9};

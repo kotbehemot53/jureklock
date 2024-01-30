@@ -20,7 +20,7 @@ private:
     void stopListeningForCode();
 
 public:
-    StateManager(CodeBuffer* aCodeBuffer);
+    explicit StateManager(CodeBuffer* aCodeBuffer);
 
     void listenForCodeToOpen();
     void listenForCodeToChange();

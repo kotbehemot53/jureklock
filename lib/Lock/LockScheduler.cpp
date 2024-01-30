@@ -20,6 +20,8 @@ bool LockScheduler::Callback()
 {
     this->lock->lock();
     this->statusLedOutput->statusLEDOff();
+
+    return false;
 }
 
 void LockScheduler::unlockDoorAndScheduleLocking()

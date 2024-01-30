@@ -23,12 +23,12 @@ StatusLEDOutput::StatusLEDOutput(uint8_t aLedPin, Scheduler* ts): Task(0,0,ts,fa
 //    StatusLEDOutput::LEDBlinkingTask = new Task(0, 0, &StatusLEDOutput::blinkCallback, ts, false);
 //}
 
-void StatusLEDOutput::statusLEDOn()
+void StatusLEDOutput::statusLEDOn() const
 {
     digitalWrite(this->ledPin, HIGH);
 }
 
-void StatusLEDOutput::statusLEDOff()
+void StatusLEDOutput::statusLEDOff() const
 {
     digitalWrite(this->ledPin, LOW);
 }
@@ -76,4 +76,6 @@ bool StatusLEDOutput::Callback()
     if (this->isLastIteration()) {
         this->statusLEDOff();
     }
+
+    return false;
 }
