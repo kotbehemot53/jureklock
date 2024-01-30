@@ -1,22 +1,26 @@
 //
-// Created by behemot on 27.12.2023.
+// Created by behemot on 21.01.2024.
 //
 
 #ifndef JUREKLOCK1_LOCK_H
 #define JUREKLOCK1_LOCK_H
 
+#include <Arduino.h>
+
 class Lock
 {
 private:
     Lock();
-    unsigned char code[4];
+
+    byte doorPin;
 
 public:
-    explicit Lock(unsigned char defaultCode[4]);
+    explicit Lock(byte doorPin);
 
-    void setCode(unsigned char[4]);
-    unsigned char* getCode();
-    bool checkCode (unsigned char[4]);
+    inline void unlock() const { digitalWrite(this->doorPin, HIGH); }
+    inline void lock() const { digitalWrite(this->doorPin, LOW); }
+    inline bool isUnlocked() const { return digitalRead(this->doorPin); }
+
 };
 
 #endif //JUREKLOCK1_LOCK_H

@@ -5,17 +5,15 @@
 #ifndef JUREKLOCK1_GAME_H
 #define JUREKLOCK1_GAME_H
 
-#define SLOWDOWN_FACTOR 20.0
-#define INIT_JUMP_SPEED 2.2
-#define GRAVITY 0.15
-
 #include "Arduino.h"
 
 class Game
 {
 private:
+    constexpr static const double gravity = 0.15;
+    constexpr static const double initJumpSpeed = 2.2;
+    constexpr static const double slowdownFactor = 20.0;
     static const int groundHeight = 30;
-    // TODO: turn it into a static const and use where 10 is used!
     static const byte obstacleCount = 10;
 
     byte mainCharacterSymbol = 118;

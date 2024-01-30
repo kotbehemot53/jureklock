@@ -37,7 +37,7 @@ void Game::tick()
     this->prevTickTime = currentTime;
 
     // handle obstacle movement
-    byte obstacleOffset = ceil( (deltaTime / (SLOWDOWN_FACTOR/speed)));// * speed );
+    byte obstacleOffset = ceil( (deltaTime / (Game::slowdownFactor/speed)));// * speed );
     for (byte i = 0; i < this->obstacleCount; ++i) {
         if (this->obstacleEnabled[i]) {
             if (this->obstacleInternalPositions[i] > -16) {
@@ -68,12 +68,12 @@ void Game::tick()
     }
 
     // handle jumps
-    int deltaVert = floor( (deltaTime / (SLOWDOWN_FACTOR)) * this->mainCharacterVerticalSpeed );
+    int deltaVert = floor( (deltaTime / (Game::slowdownFactor)) * this->mainCharacterVerticalSpeed );
     if (deltaVert > this->mainCharacterVerticalPosition) {
         deltaVert = this->mainCharacterVerticalPosition;
     }
     this->mainCharacterVerticalPosition -= deltaVert;
-    this->mainCharacterVerticalSpeed -= GRAVITY * speed;
+    this->mainCharacterVerticalSpeed -= Game::gravity * speed;
     if (this->mainCharacterVerticalPosition >= groundHeight) {
         this->mainCharacterVerticalPosition = groundHeight;
         this->mainCharacterVerticalSpeed = 0;
@@ -81,7 +81,6 @@ void Game::tick()
 
     // increment score every 0.1 s
     if (!this->gameOver && ((currentTime < this->prevScoreTime) || (currentTime - this->prevScoreTime > 100))) {
-        // TODO: this rounding is shit, use more accurate values, but still do the increments (with speed too?) because millis() overflows from time to time
         score += (currentTime - this->prevScoreTime) / 100.0;
         this->prevScoreTime = currentTime;
 
@@ -127,7 +126,7 @@ bool Game::isGameOver()
 void Game::jump()
 {
     if (this->mainCharacterVerticalPosition >= groundHeight) {
-        this->mainCharacterVerticalSpeed = INIT_JUMP_SPEED * (1 + 0.33 * (speed - 1));
+        this->mainCharacterVerticalSpeed = Game::initJumpSpeed * (1 + 0.33 * (speed - 1));
     }
 }
 
