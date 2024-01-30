@@ -6,13 +6,18 @@
 #include <TinyIRReceiver.hpp>
 #include <OneButtonTiny.h>
 #include <U8g2lib.h>
+
+#define _TASK_OO_CALLBACKS
 #include <TaskScheduler.h>
 
 #include "CodeManager.h"
 #include "Lock.h"
+#include "LockScheduler.h"
 #include "Game.h"
 #include "RemoteInput.h"
 #include "CodeBuffer.h"
+#include "StatusLEDOutput.h"
+#include "ScreenOutput.h"
 
 #define DOOR_PIN 8
 #define NEG_RESET_PIN 9
@@ -67,9 +72,7 @@
 //      1. refactor (OOP)
 //      2. migrate to avr DA series?
 //      3. 5V buck converter?
-//      4. after manual game turn-off, pressing asterisk causes permanent status light, instead of a blink - why???
-//      5. game freezing randomly on real hardware - why? and why didn't it freeze at one revision (see tags)?
-
+//      4. game freezing randomly on real hardware - why? and why didn't it freeze at one revision (see tags)?
 
 //inline const char* findButtonName(unsigned char code)
 //{
@@ -128,42 +131,29 @@ RemoteInput remoteInput(
     numberButtons
 );
 CodeBuffer codeBuffer;
+StatusLEDOutput statusLedOutput(STATUS_LED_PIN, &ts);
 
 // TODO: what about these:
 OneButtonTiny* resetBtn;
 uint8_t receivedCommand;
 
-// TODO: class StatusLEDOutput?
-void statusLEDOn();
-void statusLEDOff();
-void shortBlink();
-void longBlink();
-void doubleBlink();
-void tripleBlink();
-void blinkCallback();
-Task LEDBlinkingTask(0, 0, &blinkCallback, &ts, false);
+// game
+Game game;
 
-// TODO: class screen?
-void screenSay(const __FlashStringHelper *, byte height = 26);
-void screenSay2Lines(const char *, const char *);
-void screenDrawStar(byte);
-void screenClear();
-void screenScheduleClear(int timeout);
-Task screenClearingTask(0, 1, &screenClear, &ts, false);
+// TODO: game orchestration? and drawing?
+bool gameInProgress = false;
+
 U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0);
+// TODO: construct u8g2 inside screenOutput? or game drawing class?
+//       or not, because both screen and game drawing should reuse the same object?
+//       or should game drawing use screen output???
+ScreenOutput screenOutput(&ts, &game, &u8g2);
 
 // TODO: debug class?
 //void printCurrentCode();
 
-// TODO: some orchestrator class?
-void lockDoor();
-void unlockDoorAndScheduleLocking();
-Task doorLockingTask(0, 1, &lockDoor, &ts, false);
+LockScheduler lockScheduler(&ts, &lock, &statusLedOutput, DOOR_OPEN_TIME_MS);
 
-// game
-Game game;
-bool gameInProgress = false;
-char gameScoreStr[100] = "Wynik: 0";
 
 void setup() {
     pinMode(DOOR_PIN, OUTPUT);
@@ -203,54 +193,22 @@ void handleReceivedTinyIRData(uint8_t aAddress, uint8_t aCommand, uint8_t aFlags
     remoteInterruptData.isRepeat = aFlags == IRDATA_FLAGS_IS_REPEAT;
     remoteInterruptData.parityFailed = aFlags == IRDATA_FLAGS_PARITY_FAILED;
     remoteInterruptData.justWritten = true;
-
-//    remoteInterruptData.Flags = aFlags;
-
-//    remoteInput.setReceivedCommand(
-//        aCommand,
-//        aFlags == IRDATA_FLAGS_IS_REPEAT,
-//        aFlags == IRDATA_FLAGS_PARITY_FAILED
-//    );
 }
 
 void loop() {
     wdt_reset();
 
-//    timer.tick();
     ts.execute();
     resetBtn->tick();
 
+    // TODO: move it all to some game orchestrator?
     // draw game
     if (gameInProgress) {
-        // calculate score string
-        sprintf(gameScoreStr, "Wynik: %d", game.getScore());
-
         if (game.isGameOver()) {
-            // draw game over screen
-            screenSay2Lines("Koniec!", gameScoreStr);
-
+            screenOutput.drawGameOver();
             gameInProgress = false;
         } else {
-            // make it a separate screen method? which takes game as arg?
-            u8g2.clearBuffer();
-            // draw main character
-            u8g2.setFont(u8g2_font_unifont_t_animals);
-            u8g2.drawGlyph(game.getMainCharacterPosition(), game.getMainCharacterVerticalPosition(), game.getMainCharacterSymbol());
-
-            // draw obstacles
-            for (byte i = 0; i < game.getObstacleCount(); ++i) {
-                if (game.isObstacleEnabled(i)) {
-                    u8g2.drawGlyph(game.getObstaclePosition(i), 30, game.getObstacleSymbol(i));
-                }
-            }
-
-            // draw score
-            u8g2.setFont(u8g2_font_t0_11_mr );
-            u8g2.drawStr(46,10,gameScoreStr);
-
-            // draw ground
-            u8g2.drawLine(0, 31, 127, 31);
-            u8g2.sendBuffer();
+            screenOutput.drawGame();
         }
 
         game.tick();
@@ -265,35 +223,32 @@ void loop() {
             gameInProgress = false;
 
             codeBuffer.listenForCodeToOpen();
-            shortBlink();
+            statusLedOutput.shortBlink();
 
-            screenSay(F("Dawaj kod!"));
+            screenOutput.say(F("Dawaj kod!"));
         } else if (codeBuffer.isListeningForCodeToOpen() && remoteInput.isCommandNumeric(receivedCommand)) {
-            screenDrawStar(codeBuffer.getNumberOfDigitsReceived());
+            screenOutput.drawStar(codeBuffer.getNumberOfDigitsReceived());
 
             codeBuffer.addDigit(receivedCommand);
 
             // full code received
             if (!codeBuffer.isListeningForCodeToOpen()) {
                 if (codeManager.checkCode(codeBuffer.getCode())) {
-                    unlockDoorAndScheduleLocking();
+                    lockScheduler.unlockDoorAndScheduleLocking();
 
-                    screenSay(F("Otwarte!"));
+                    screenOutput.say(F("Otwarte!"));
                 } else {
-                    doubleBlink();
-                    screenSay(F("Lipa, panie!"));
-//                        Serial.println("Code check failed.");
+                    statusLedOutput.doubleBlink();
+                    screenOutput.say(F("Lipa, panie!"));
                 }
             }
         } else if (receivedCommand == remoteInput.commandEnterCodeToChange && lock.isUnlocked()) {
-//            Serial.println("Getting new code");
-
             codeBuffer.listenForCodeToChange();
-            tripleBlink();
+            statusLedOutput.tripleBlink();
 
-            screenSay(F("Nowy kod?"));
+            screenOutput.say(F("Nowy kod?"));
         } else if (codeBuffer.isListeningForCodeToChange() && remoteInput.isCommandNumeric(receivedCommand)) {
-            screenDrawStar(codeBuffer.getNumberOfDigitsReceived());
+            screenOutput.drawStar(codeBuffer.getNumberOfDigitsReceived());
 
             codeBuffer.addDigit(receivedCommand);
 
@@ -301,74 +256,31 @@ void loop() {
             if (!codeBuffer.isListeningForCodeToChange()) {
                 codeManager.saveCode(codeBuffer.getCode());
 
-                screenSay(F("Ustawiony!"));
-//                    Serial.println("Code set.");
+                screenOutput.say(F("Ustawiony!"));
 //                    printCurrentCode();
-                longBlink();
+                statusLedOutput.longBlink();
             }
         } else if (receivedCommand == remoteInput.commandStartGame) {
             if (gameInProgress) {
                 // TODO: move gameInProgress to game?
                 gameInProgress = false;
-                screenScheduleClear(1);
+                screenOutput.scheduleClear(1);
             } else {
                 codeBuffer.stopListeningForCode();
 
                 game.initGame();
                 gameInProgress = true;
 
-                //TODO:  separate const for that?
-                screenScheduleClear(DOOR_OPEN_TIME_MS);
+                // TODO:  separate const for that?
+                // TODO: set gameInProgress to false on clear!
+                // TODO: actually keep all these waits/progresses in some orchestrator and resetll ALL on all clears? or not?
+                screenOutput.scheduleClear(DOOR_OPEN_TIME_MS);
             }
         } else if (gameInProgress && receivedCommand == remoteInput.commandJump) {
             game.jump();
-            screenScheduleClear(DOOR_OPEN_TIME_MS);
+            screenOutput.scheduleClear(DOOR_OPEN_TIME_MS);
         }
     }
-}
-
-void screenDrawStar(byte starNo)
-{
-    const char* stars[] = {"*", "* *", "* * *", "* * * *"};
-    u8g2.clearBuffer();
-    u8g2.setFont(u8g2_font_calblk36_tr);
-    u8g2.drawStr(20,38,stars[starNo]);
-    u8g2.sendBuffer();
-
-    screenScheduleClear(DOOR_OPEN_TIME_MS);
-}
-
-void screenSay(const __FlashStringHelper* text, byte height)
-{
-    u8g2.clearBuffer();
-    u8g2.setFont(u8g2_font_crox4hb_tr);
-    u8g2.setCursor(0, height);
-    u8g2.print(text);
-    u8g2.sendBuffer();
-
-    screenScheduleClear(DOOR_OPEN_TIME_MS);
-}
-
-void screenSay2Lines(const char* text, const char* text2)
-{
-    u8g2.clearBuffer();
-    u8g2.setFont(u8g2_font_helvB12_tr);
-    u8g2.drawStr(0,15,text);
-    u8g2.drawStr(0,31,text2);
-    u8g2.sendBuffer();
-
-    screenScheduleClear(DOOR_OPEN_TIME_MS);
-}
-
-void screenScheduleClear(int timeout)
-{
-    screenClearingTask.restartDelayed(timeout);
-}
-
-void screenClear()
-{
-    u8g2.clearDisplay();
-    gameInProgress = false;
 }
 
 //void printCurrentCode()
@@ -381,76 +293,8 @@ void screenClear()
 ////    Serial.println();
 //}
 
-void unlockDoorAndScheduleLocking()
-{
-    lock.unlock();
-    statusLEDOn();
-    doorLockingTask.restartDelayed(DOOR_OPEN_TIME_MS);
-}
-
-void lockDoor() {
-    lock.lock();
-    statusLEDOff();
-    screenSay(F("Zamkniete!"));
-}
-
-void statusLEDOn()
-{
-    digitalWrite(STATUS_LED_PIN, HIGH);
-}
-
-void statusLEDOff()
-{
-    digitalWrite(STATUS_LED_PIN, LOW);
-}
-
-void blinkCallback()
-{
-    if (LEDBlinkingTask.getRunCounter() & 1) {
-        statusLEDOn();
-    } else {
-        statusLEDOff();
-    }
-
-    if (LEDBlinkingTask.isLastIteration()) {
-        statusLEDOff();
-    }
-}
-
-void shortBlink()
-{
-    LEDBlinkingTask.disable();
-    LEDBlinkingTask.setInterval(50);
-    LEDBlinkingTask.setIterations(2);
-    LEDBlinkingTask.enable();
-}
-
-void longBlink()
-{
-    LEDBlinkingTask.disable();
-    LEDBlinkingTask.setInterval(1000);
-    LEDBlinkingTask.setIterations(2);
-    LEDBlinkingTask.enable();
-}
-
-void doubleBlink()
-{
-    LEDBlinkingTask.disable();
-    LEDBlinkingTask.setInterval(100);
-    LEDBlinkingTask.setIterations(4);
-    LEDBlinkingTask.enable();
-}
-
-void tripleBlink()
-{
-    LEDBlinkingTask.disable();
-    LEDBlinkingTask.setInterval(100);
-    LEDBlinkingTask.setIterations(6);
-    LEDBlinkingTask.enable();
-}
-
 void factoryReset()
 {
     codeManager.factoryReset();
-    screenSay(F("Zresetowane!"));
+    screenOutput.say(F("Zresetowane!"));
 }

@@ -20,6 +20,7 @@ public:
     inline void unlock() { digitalWrite(this->doorPin, HIGH); }
     inline void lock() { digitalWrite(this->doorPin, LOW); }
     inline bool isUnlocked() { return digitalRead(this->doorPin); }
+
 };
 
 #endif //JUREKLOCK1_LOCK_H

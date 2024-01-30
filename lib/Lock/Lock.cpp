@@ -6,5 +6,7 @@
 
 Lock::Lock() {}
 
-Lock::Lock(byte doorPin): doorPin(doorPin)
-{}
+Lock::Lock(byte aDoorPin)
+{
+    doorPin = aDoorPin;
+}
