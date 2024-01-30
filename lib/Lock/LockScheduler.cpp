@@ -15,14 +15,12 @@ LockScheduler::LockScheduler(Scheduler* ts, Lock* aLock, StatusLEDOutput* aStatu
 bool LockScheduler::Callback()
 {
     this->lock->lock();
-    // TODO: Screen say
     this->statusLedOutput->statusLEDOff();
 }
 
 void LockScheduler::unlockDoorAndScheduleLocking()
 {
     this->lock->unlock();
-    // TODO: Screen say?
     this->statusLedOutput->statusLEDOn();
     this->restartDelayed(this->doorOpenTime);
 }
