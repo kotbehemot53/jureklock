@@ -4,6 +4,10 @@
 
 #include "ScreenOutput.h"
 
+ScreenOutput::ScreenOutput()
+{
+}
+
 ScreenOutput::ScreenOutput(Game *aGame, U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C *aU8g2)
 {
     this->game = aGame;

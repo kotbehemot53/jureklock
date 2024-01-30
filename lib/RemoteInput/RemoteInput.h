@@ -18,8 +18,9 @@ class RemoteInput
 {
 private:
     const uint8_t* commandsNumeric;
-
     uint8_t receivedCommand;
+
+    RemoteInput();
 
     void setReceivedCommand(uint8_t command);
 

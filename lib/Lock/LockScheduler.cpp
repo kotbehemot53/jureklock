@@ -4,6 +4,10 @@
 
 #include "LockScheduler.h"
 
+LockScheduler::LockScheduler()
+{
+}
+
 LockScheduler::LockScheduler(Scheduler* ts, Lock* aLock, StatusLEDOutput* aStatusLedOutput, int aDoorOpenTime):
     Task(0, 1, ts, false)
 {

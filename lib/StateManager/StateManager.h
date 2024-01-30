@@ -15,6 +15,8 @@ private:
     bool listeningForCodeToChange = false;
     bool gameInProgress = false;
 
+    StateManager();
+
     void stopListeningForCode();
 
 public:

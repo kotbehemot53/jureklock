@@ -4,6 +4,10 @@
 
 #include "StateManager.h"
 
+StateManager::StateManager()
+{
+}
+
 StateManager::StateManager(CodeBuffer *aCodeBuffer) : codeBuffer(aCodeBuffer)
 {
 }

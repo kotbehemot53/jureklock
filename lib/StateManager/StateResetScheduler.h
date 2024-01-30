@@ -14,6 +14,8 @@ private:
     StateManager* stateManager;
     ScreenOutput* screenOutput;
 
+    StateResetScheduler();
+
 public:
     StateResetScheduler(Scheduler* ts, StateManager *aStateManager, ScreenOutput *aScreenOutput);
 

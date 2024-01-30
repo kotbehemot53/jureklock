@@ -4,6 +4,10 @@
 
 #include "RemoteInput.h"
 
+RemoteInput::RemoteInput()
+{
+}
+
 RemoteInput::RemoteInput(
     uint8_t commandEnterCodeToOpen,
     uint8_t commandEnterCodeToChange,

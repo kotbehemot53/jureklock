@@ -20,6 +20,8 @@ private:
     U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C* u8g2;
     char gameScoreStr[100] = "Wynik: 0";
 
+    ScreenOutput();
+
 public:
     ScreenOutput(Game* aGame, U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C* aU8g2);
 

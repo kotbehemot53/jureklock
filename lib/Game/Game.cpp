@@ -81,7 +81,6 @@ void Game::tick()
 
     // increment score every 0.1 s
     if (!this->gameOver && ((currentTime < this->prevScoreTime) || (currentTime - this->prevScoreTime > 100))) {
-        // TODO: this rounding is shit, use more accurate values, but still do the increments (with speed too?) because millis() overflows from time to time
         score += (currentTime - this->prevScoreTime) / 100.0;
         this->prevScoreTime = currentTime;
 

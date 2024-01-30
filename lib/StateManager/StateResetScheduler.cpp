@@ -4,6 +4,10 @@
 
 #include "StateResetScheduler.h"
 
+StateResetScheduler::StateResetScheduler()
+{
+}
+
 StateResetScheduler::StateResetScheduler(Scheduler* ts, StateManager *aStateManager, ScreenOutput *aScreenOutput) : Task(0, 1, ts, false)
 {
     this->stateManager = aStateManager;

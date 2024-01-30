@@ -18,6 +18,8 @@ private:
     Lock* lock;
     StatusLEDOutput* statusLedOutput;
 
+    LockScheduler();
+
 public:
     LockScheduler(Scheduler* ts, Lock* aLock, StatusLEDOutput* aStatusLedOutput, int aDoorOpenTime);
 

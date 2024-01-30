@@ -7,8 +7,6 @@
 
 #include <Arduino.h>
 
-//#include "StateManager.h"
-
 class CodeBuffer
 {
 private:
@@ -17,17 +15,16 @@ private:
     unsigned char buffer[bufferLength];
     short bufferPtr = 0;
 
-//protected:
+    void addDigit(unsigned char receivedChar);
 
 public:
-    void addDigit(unsigned char receivedChar);
 
     void reset();
     bool isCompleteCodeReceived();
     short getNumberOfDigitsReceived();
     unsigned char* getCode();
 
-//    friend class StateManager;
+    friend class StateManager;
 };
 
 #endif //JUREKLOCK1_CODEBUFFER_H
