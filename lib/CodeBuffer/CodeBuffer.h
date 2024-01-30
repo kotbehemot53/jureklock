@@ -7,25 +7,27 @@
 
 #include <Arduino.h>
 
+//#include "StateManager.h"
+
 class CodeBuffer
 {
 private:
     static const byte bufferLength = 4;
 
     unsigned char buffer[bufferLength];
-    short bufferPtr = -1;
-    bool listeningForCodeToOpen = false;
-    bool listeningForCodeToChange = false;
+    short bufferPtr = 0;
+
+//protected:
 
 public:
-    void listenForCodeToOpen();
-    void listenForCodeToChange();
-    void stopListeningForCode();
-    bool isListeningForCodeToOpen();
-    bool isListeningForCodeToChange();
     void addDigit(unsigned char receivedChar);
+
+    void reset();
+    bool isCompleteCodeReceived();
     short getNumberOfDigitsReceived();
     unsigned char* getCode();
+
+//    friend class StateManager;
 };
 
 #endif //JUREKLOCK1_CODEBUFFER_H

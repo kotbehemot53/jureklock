@@ -9,7 +9,7 @@ RemoteInput::RemoteInput(
     uint8_t commandEnterCodeToChange,
     uint8_t commandStartGame,
     uint8_t commandJump,
-    uint8_t* commandsNumeric
+    const uint8_t* commandsNumeric
 ):
     commandsNumeric(commandsNumeric),
     commandEnterCodeToOpen(commandEnterCodeToOpen),

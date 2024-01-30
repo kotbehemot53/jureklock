@@ -34,7 +34,7 @@ public:
         uint8_t commandEnterCodeToChange,
         uint8_t commandStartGame,
         uint8_t commandJump,
-        uint8_t* commandsNumeric
+        const uint8_t* commandsNumeric
     );
 
     bool hasNewCommand(volatile RemoteInputReceivedData* receivedData);

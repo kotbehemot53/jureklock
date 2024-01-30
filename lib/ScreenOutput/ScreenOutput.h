@@ -6,13 +6,14 @@
 #define JUREKLOCK1_SCREENOUTPUT_H
 
 #include <Arduino.h>
-#include "Game.h"
 #include <U8g2lib.h>
 
 #define _TASK_OO_CALLBACKS      // Support for dynamic callback method binding
 #include <TaskSchedulerDeclarations.h>
 
-class ScreenOutput : public Task
+#include "Game.h"
+
+class ScreenOutput
 {
 private:
     Game* game;
@@ -20,18 +21,16 @@ private:
     char gameScoreStr[100] = "Wynik: 0";
 
 public:
-    ScreenOutput(Scheduler* ts, Game* aGame, U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C* aU8g2);
+    ScreenOutput(Game* aGame, U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C* aU8g2);
 
     void say(const __FlashStringHelper *, byte height = 26);
     void say2Lines(const char *, const char *);
     void drawStar(byte);
-    void clearScreen();
-    void scheduleClear(int timeout);
 
     void drawGame();
     void drawGameOver();
 
-    bool Callback();
+    void clearScreen();
 };
 
 
