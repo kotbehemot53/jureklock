@@ -10,3 +10,9 @@ Lock::Lock(byte aDoorPin)
 {
     doorPin = aDoorPin;
 }
+
+void Lock::init()
+{
+    pinMode(this->doorPin, OUTPUT);
+    digitalWrite(this->doorPin, LOW);
+}

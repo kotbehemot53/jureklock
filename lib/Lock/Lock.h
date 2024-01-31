@@ -17,6 +17,7 @@ private:
 public:
     explicit Lock(byte doorPin);
 
+    void init();
     inline void unlock() const { digitalWrite(this->doorPin, HIGH); }
     inline void lock() const { digitalWrite(this->doorPin, LOW); }
     inline bool isUnlocked() const { return digitalRead(this->doorPin); }

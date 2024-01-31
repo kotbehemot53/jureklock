@@ -22,6 +22,7 @@ private:
 public :
     StatusLEDOutput(uint8_t ledPin, Scheduler* ts);
 
+    void init();
     void statusLEDOn() const;
     void statusLEDOff() const;
 

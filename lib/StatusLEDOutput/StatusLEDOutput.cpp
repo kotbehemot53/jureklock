@@ -3,25 +3,21 @@
 //
 
 #include "StatusLEDOutput.h"
-//#include <functional>
-//
+
 StatusLEDOutput::StatusLEDOutput()
 {
 }
-//
+
 StatusLEDOutput::StatusLEDOutput(uint8_t aLedPin, Scheduler* ts): Task(0,0,ts,false)
 {
     ledPin = aLedPin;
 }
 
-//Task StatusLEDOutput::LEDBlinkingTask(0, 0, &blinkCallback, &ts, false);
-
-//void StatusLEDOutput::setup(Scheduler* ts, uint8_t aLedPin)
-//{
-//    StatusLEDOutput::ledPin = aLedPin;
-//    // TODO: no destructor needed right?
-//    StatusLEDOutput::LEDBlinkingTask = new Task(0, 0, &StatusLEDOutput::blinkCallback, ts, false);
-//}
+void StatusLEDOutput::init()
+{
+    pinMode(this->ledPin, OUTPUT);
+    digitalWrite(this->ledPin, LOW);
+}
 
 void StatusLEDOutput::statusLEDOn() const
 {

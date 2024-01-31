@@ -126,14 +126,11 @@ LockScheduler lockScheduler(&ts, &lock, &statusLedOutput, DOOR_OPEN_TIME_MS);
 
 
 void setup() {
-    pinMode(DOOR_PIN, OUTPUT);
-    pinMode(STATUS_LED_PIN, OUTPUT);
-
-    digitalWrite(DOOR_PIN, LOW);
-    digitalWrite(STATUS_LED_PIN, LOW);
-
     resetBtn = new OneButtonTiny(NEG_RESET_PIN);
     resetBtn->attachClick(factoryReset);
+
+    lock.init();
+    statusLedOutput.init();
 
     initPCIInterruptForTinyReceiver();
 
@@ -182,7 +179,6 @@ void loop() {
     // handle input
     if (remoteInput.hasNewCommand(&remoteInterruptData)) {
         receivedCommand = remoteInput.getCommand();
-        // start listening for code
         if (receivedCommand == remoteInput.commandEnterCodeToOpen) {
             handleListenForCodeToOpen();
         } else if (stateManager.isListeningForCodeToOpen() && remoteInput.isCommandNumeric(receivedCommand)) {
